@@ -16,7 +16,6 @@ namespace {
 constexpr uint16_t ADC_MAX = ((1 << 12) - 1); // 4095
 constexpr uint16_t ADC_NEUTRAL = 2048;
 constexpr int ADC_PIN_OFFSET = 26;
-constexpr uint32_t ANALOG_ERROR_BASE = 1000;
 
 bool invertX(InvertMode invertMode) {
     return invertMode == InvertMode::INVERT_X ||
@@ -35,6 +34,10 @@ uint16_t clampAdc(int32_t value) {
         static_cast<int32_t>(ADC_MAX)));
 }
 
+uint16_t clampAdc(uint32_t value) {
+    return static_cast<uint16_t>(std::min<uint32_t>(value, ADC_MAX));
+}
+
 uint16_t clampNeutral(uint16_t value) {
     return static_cast<uint16_t>(std::clamp(
         static_cast<int>(value),
@@ -42,12 +45,13 @@ uint16_t clampNeutral(uint16_t value) {
         static_cast<int>(ADC_MAX - 1)));
 }
 
-uint16_t normalizeNeutral(uint16_t rawValue, bool invert) {
+uint16_t normalizeAdc(uint32_t rawValue, bool invert) {
+    uint16_t adcValue = clampAdc(rawValue);
     if (invert) {
-        rawValue = ADC_MAX - rawValue;
+        adcValue = ADC_MAX - adcValue;
     }
 
-    return clampNeutral(rawValue);
+    return adcValue;
 }
 
 uint16_t readAdc(Pin_t pin) {
@@ -58,29 +62,11 @@ uint16_t readAdc(Pin_t pin) {
 
 uint16_t getConfiguredNeutral(Pin_t pin, uint32_t storedCenter, bool autoCalibration, bool invert) {
     if (autoCalibration && isValidPin(pin)) {
-        return normalizeNeutral(readAdc(pin), invert);
+        return clampNeutral(normalizeAdc(readAdc(pin), invert));
     }
 
-    if (storedCenter != 0) {
-        return normalizeNeutral(clampAdc(static_cast<int32_t>(storedCenter)), invert);
-    }
-
-    return ADC_NEUTRAL;
-}
-
-uint16_t getDeadzone(uint32_t innerDeadzone) {
-    const float percent = std::clamp(static_cast<float>(innerDeadzone), 0.0f, 100.0f) / 100.0f;
-    return static_cast<uint16_t>(std::max(1L, std::lround(ADC_MAX * percent)));
-}
-
-uint16_t getLowerEdge(uint16_t neutral, float outerPercent) {
-    const uint16_t travel = static_cast<uint16_t>(std::max(1L, std::lround(neutral * outerPercent)));
-    return (travel >= neutral) ? 0 : static_cast<uint16_t>(neutral - travel);
-}
-
-uint16_t getUpperEdge(uint16_t neutral, float outerPercent) {
-    const uint16_t travel = static_cast<uint16_t>(std::max(1L, std::lround((ADC_MAX - neutral) * outerPercent)));
-    return static_cast<uint16_t>(std::min<int32_t>(ADC_MAX, neutral + travel));
+    const uint32_t neutral = (storedCenter == 0) ? ADC_NEUTRAL : storedCenter;
+    return clampNeutral(normalizeAdc(neutral, invert));
 }
 
 uint16_t getMinTravel(const AnalogJoystickCalibration& calibration) {
@@ -91,32 +77,71 @@ uint16_t getMinTravel(const AnalogJoystickCalibration& calibration) {
     return std::min(std::min(xLow, xHigh), std::min(yLow, yHigh));
 }
 
-float getCompensationFactor(uint32_t analogError) {
-    const float factor =
-        static_cast<float>(ANALOG_ERROR_BASE - std::min(analogError, ANALOG_ERROR_BASE)) /
-        static_cast<float>(ANALOG_ERROR_BASE);
-    return std::clamp(factor, 0.0f, 1.0f);
+float getCompensationFactor(uint32_t diagonalCompensation) {
+    return std::clamp(static_cast<float>(diagonalCompensation) / 100.0f, 0.0f, 1.0f);
+}
+
+void setAxisCalibration(
+    uint32_t rawMin,
+    uint32_t rawMax,
+    uint16_t neutral,
+    bool invert,
+    uint16_t& min,
+    uint16_t& max,
+    uint16_t& calibratedNeutral) {
+    const uint16_t valueA = normalizeAdc(rawMin, invert);
+    const uint16_t valueB = normalizeAdc(rawMax, invert);
+
+    min = std::min(valueA, valueB);
+    max = std::max(valueA, valueB);
+    calibratedNeutral = clampNeutral(neutral);
+
+    if (min == max) {
+        min = 0;
+        max = ADC_MAX;
+    }
+
+    if (min >= calibratedNeutral) {
+        min = static_cast<uint16_t>(calibratedNeutral - 1);
+    }
+
+    if (max <= calibratedNeutral) {
+        max = static_cast<uint16_t>(calibratedNeutral + 1);
+    }
 }
 
 AnalogJoystickCalibration buildCalibration(
     uint16_t xNeutral,
     uint16_t yNeutral,
-    uint32_t innerDeadzone,
-    uint32_t outerDeadzone) {
+    uint32_t xMin,
+    uint32_t xMax,
+    uint32_t yMin,
+    uint32_t yMax,
+    uint32_t deadzone,
+    bool xInverted,
+    bool yInverted) {
     AnalogJoystickCalibration calibration;
-    const float outerPercent =
-        std::clamp(static_cast<float>(outerDeadzone), 1.0f, 100.0f) / 100.0f;
 
-    calibration.neutral[0] = xNeutral;
-    calibration.neutral[1] = yNeutral;
-    calibration.min[0] = getLowerEdge(xNeutral, outerPercent);
-    calibration.max[0] = getUpperEdge(xNeutral, outerPercent);
-    calibration.min[1] = getLowerEdge(yNeutral, outerPercent);
-    calibration.max[1] = getUpperEdge(yNeutral, outerPercent);
+    setAxisCalibration(
+        xMin,
+        xMax,
+        xNeutral,
+        xInverted,
+        calibration.min[0],
+        calibration.max[0],
+        calibration.neutral[0]);
+    setAxisCalibration(
+        yMin,
+        yMax,
+        yNeutral,
+        yInverted,
+        calibration.min[1],
+        calibration.max[1],
+        calibration.neutral[1]);
 
     const uint16_t minTravel = getMinTravel(calibration);
-    const uint16_t maxDeadzone = (minTravel > 1) ? static_cast<uint16_t>(minTravel - 1) : 1;
-    calibration.deadzone = std::min(getDeadzone(innerDeadzone), maxDeadzone);
+    const uint16_t maxDeadzone = (minTravel > 1) ? static_cast<uint16_t>(minTravel - 1) : 0;
+    calibration.deadzone = std::min(clampAdc(deadzone), maxDeadzone);
 
     return calibration;
 }
@@ -140,13 +165,16 @@ void AnalogInput::setup() {
         analogOptions.analogAdc1Mode,
         analogOptions.analog_smoothing,
         analogOptions.smoothing_factor,
-        analogOptions.inner_deadzone,
-        analogOptions.outer_deadzone,
         analogOptions.auto_calibrate,
         analogOptions.forced_circularity,
+        analogOptions.joystick_min_x,
+        analogOptions.joystick_max_x,
+        analogOptions.joystick_min_y,
+        analogOptions.joystick_max_y,
         analogOptions.joystick_center_x,
         analogOptions.joystick_center_y,
-        analogOptions.analog_error);
+        analogOptions.joystick_deadzone,
+        analogOptions.diagonal_compensation);
 
     configureStick(
         1,
@@ -156,13 +184,16 @@ void AnalogInput::setup() {
         analogOptions.analogAdc2Mode,
         analogOptions.analog_smoothing2,
         analogOptions.smoothing_factor2,
-        analogOptions.inner_deadzone2,
-        analogOptions.outer_deadzone2,
         analogOptions.auto_calibrate2,
         analogOptions.forced_circularity2,
+        analogOptions.joystick_min_x2,
+        analogOptions.joystick_max_x2,
+        analogOptions.joystick_min_y2,
+        analogOptions.joystick_max_y2,
         analogOptions.joystick_center_x2,
         analogOptions.joystick_center_y2,
-        analogOptions.analog_error2);
+        analogOptions.joystick_deadzone2,
+        analogOptions.diagonal_compensation2);
 }
 
 void AnalogInput::configureStick(
@@ -173,13 +204,16 @@ void AnalogInput::configureStick(
     DpadMode analog_dpad,
     bool ema_option,
     float ema_smoothing,
-    uint32_t inner_deadzone,
-    uint32_t outer_deadzone,
     bool auto_calibration,
     bool forced_circularity,
+    uint32_t joystick_min_x,
+    uint32_t joystick_max_x,
+    uint32_t joystick_min_y,
+    uint32_t joystick_max_y,
     uint32_t joystick_center_x,
     uint32_t joystick_center_y,
-    uint32_t analog_error) {
+    uint32_t joystick_deadzone,
+    uint32_t diagonal_compensation) {
     adc_instance& adc_pair = adc_pairs[stick_num];
 
     adc_pair.x_pin = x_pin;
@@ -192,13 +226,17 @@ void AnalogInput::configureStick(
     adc_pair.y_ema = ADC_NEUTRAL;
     adc_pair.ema_option = ema_option;
     adc_pair.ema_smoothing = std::clamp(ema_smoothing / 1000.0f, 0.0f, 1.0f);
-    adc_pair.compensation_factor = getCompensationFactor(analog_error);
-    adc_pair.inner_deadzone = inner_deadzone;
-    adc_pair.outer_deadzone = outer_deadzone;
+    adc_pair.diagonal_compensation_strength = diagonal_compensation;
+    adc_pair.compensation_factor = getCompensationFactor(adc_pair.diagonal_compensation_strength);
     adc_pair.auto_calibration = auto_calibration;
     adc_pair.forced_circularity = forced_circularity;
+    adc_pair.joystick_min_x = joystick_min_x;
+    adc_pair.joystick_max_x = joystick_max_x;
+    adc_pair.joystick_min_y = joystick_min_y;
+    adc_pair.joystick_max_y = joystick_max_y;
     adc_pair.joystick_center_x = joystick_center_x;
     adc_pair.joystick_center_y = joystick_center_y;
+    adc_pair.joystick_deadzone = joystick_deadzone;
     adc_pair.configured = false;
     adc_pair.input = nullptr;
     adc_pair.diagonal_compensation.reset();
@@ -225,8 +263,13 @@ void AnalogInput::configureStick(
     adc_pair.calibration = buildCalibration(
         adc_pair.x_center,
         adc_pair.y_center,
-        adc_pair.inner_deadzone,
-        adc_pair.outer_deadzone);
+        adc_pair.joystick_min_x,
+        adc_pair.joystick_max_x,
+        adc_pair.joystick_min_y,
+        adc_pair.joystick_max_y,
+        adc_pair.joystick_deadzone,
+        xInverted,
+        yInverted);
 
     adc_pair.joystick = std::make_unique<AnalogJoystick>(
         adc_pair.x_pin,

@@ -625,15 +625,43 @@ void ConfigUtils::initUnsetPropertiesWithDefaults(Config& config)
     INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, forced_circularity, !!FORCED_CIRCULARITY_ENABLED);
     INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, inner_deadzone, DEFAULT_INNER_DEADZONE);
     INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, outer_deadzone, DEFAULT_OUTER_DEADZONE);
+    INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, joystick_min_x, ANALOG_ADC_1_MIN_X);
+    INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, joystick_max_x, ANALOG_ADC_1_MAX_X);
+    INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, joystick_min_y, ANALOG_ADC_1_MIN_Y);
+    INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, joystick_max_y, ANALOG_ADC_1_MAX_Y);
+    INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, joystick_center_x, ANALOG_ADC_1_NEUTRAL_X);
+    INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, joystick_center_y, ANALOG_ADC_1_NEUTRAL_Y);
+    INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, joystick_deadzone, ANALOG_ADC_1_DEADZONE);
     INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, auto_calibrate, !!AUTO_CALIBRATE_ENABLED);
     INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, analog_smoothing, !!ANALOG_SMOOTHING_ENABLED);
     INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, smoothing_factor, !!SMOOTHING_FACTOR);
     INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, analog_error, ANALOG_ERROR);
+    if (!config.addonOptions.analogOptions.has_diagonal_compensation) {
+        config.addonOptions.analogOptions.diagonal_compensation =
+            config.addonOptions.analogOptions.has_analog_error ?
+            LEGACY_ANALOG_ERROR_TO_DIAGONAL_COMPENSATION(config.addonOptions.analogOptions.analog_error) :
+            DIAGONAL_COMPENSATION_STRENGTH;
+        config.addonOptions.analogOptions.has_diagonal_compensation = true;
+    }
     INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, analog_smoothing2, !!ANALOG_SMOOTHING2_ENABLED);
     INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, smoothing_factor2, !!SMOOTHING_FACTOR2);
     INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, analog_error2, ANALOG_ERROR2);
+    if (!config.addonOptions.analogOptions.has_diagonal_compensation2) {
+        config.addonOptions.analogOptions.diagonal_compensation2 =
+            config.addonOptions.analogOptions.has_analog_error2 ?
+            LEGACY_ANALOG_ERROR_TO_DIAGONAL_COMPENSATION(config.addonOptions.analogOptions.analog_error2) :
+            DIAGONAL_COMPENSATION2_STRENGTH;
+        config.addonOptions.analogOptions.has_diagonal_compensation2 = true;
+    }
     INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, inner_deadzone2, DEFAULT_INNER_DEADZONE2);
     INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, outer_deadzone2, DEFAULT_OUTER_DEADZONE2);
+    INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, joystick_min_x2, ANALOG_ADC_2_MIN_X);
+    INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, joystick_max_x2, ANALOG_ADC_2_MAX_X);
+    INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, joystick_min_y2, ANALOG_ADC_2_MIN_Y);
+    INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, joystick_max_y2, ANALOG_ADC_2_MAX_Y);
+    INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, joystick_center_x2, ANALOG_ADC_2_NEUTRAL_X);
+    INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, joystick_center_y2, ANALOG_ADC_2_NEUTRAL_Y);
+    INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, joystick_deadzone2, ANALOG_ADC_2_DEADZONE);
     INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, auto_calibrate2, !!AUTO_CALIBRATE2_ENABLED);
     INIT_UNSET_PROPERTY(config.addonOptions.analogOptions, forced_circularity2, !!FORCED_CIRCULARITY2_ENABLED);
 

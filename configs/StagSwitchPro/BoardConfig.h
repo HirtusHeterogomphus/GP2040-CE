@@ -42,23 +42,37 @@
 #define ANALOG_ADC_1_VRY            28
 #define ANALOG_ADC_1_MODE           DPAD_MODE_LEFT_ANALOG
 #define ANALOG_ADC_1_INVERT         INVERT_X
-#define DEFAULT_INNER_DEADZONE      10
-#define DEFAULT_OUTER_DEADZONE      75
+#define ANALOG_ADC_1_MIN_X          512
+#define ANALOG_ADC_1_MAX_X          3583
+#define ANALOG_ADC_1_MIN_Y          512
+#define ANALOG_ADC_1_MAX_Y          3583
+#define ANALOG_ADC_1_NEUTRAL_X      2048
+#define ANALOG_ADC_1_NEUTRAL_Y      2048
+#define ANALOG_ADC_1_DEADZONE       410
 #define AUTO_CALIBRATE_ENABLED      1
 #define FORCED_CIRCULARITY_ENABLED  1
+#define DIAGONAL_COMPENSATION_STRENGTH  0
 #define ANALOG_ADC_2_VRX            26
 #define ANALOG_ADC_2_VRY            27
 #define ANALOG_ADC_2_MODE           DPAD_MODE_RIGHT_ANALOG
 #define ANALOG_ADC_2_INVERT         INVERT_Y
-#define DEFAULT_INNER_DEADZONE2     10
-#define DEFAULT_OUTER_DEADZONE2     75
+#define ANALOG_ADC_2_MIN_X          512
+#define ANALOG_ADC_2_MAX_X          3583
+#define ANALOG_ADC_2_MIN_Y          512
+#define ANALOG_ADC_2_MAX_Y          3583
+#define ANALOG_ADC_2_NEUTRAL_X      2048
+#define ANALOG_ADC_2_NEUTRAL_Y      2048
+#define ANALOG_ADC_2_DEADZONE       410
 #define AUTO_CALIBRATE2_ENABLED     1
 #define FORCED_CIRCULARITY2_ENABLED 1
+#define DIAGONAL_COMPENSATION2_STRENGTH 0
 
 // Setting GPIO pins to assigned by add-on
 //
-#define GPIO_PIN_12 GpioAction::ASSIGNED_TO_ADDON
-#define GPIO_PIN_13 GpioAction::ASSIGNED_TO_ADDON
+#define GPIO_PIN_26 GpioAction::ASSIGNED_TO_ADDON
+#define GPIO_PIN_27 GpioAction::ASSIGNED_TO_ADDON
+#define GPIO_PIN_28 GpioAction::ASSIGNED_TO_ADDON
+#define GPIO_PIN_29 GpioAction::ASSIGNED_TO_ADDON
 
 // Keyboard Mapping Configuration
 //                                            // GP2040 | Xinput | Switch  | PS3/4/5  | Dinput | Arcade |
