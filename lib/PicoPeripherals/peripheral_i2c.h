@@ -52,6 +52,9 @@ public:
     bool configured = false;
 
     i2c_inst_t* getController() { return _I2C; }
+    int8_t getSDA() const { return _SDA; }
+    int8_t getSCL() const { return _SCL; }
+    uint32_t getSpeed() const { return _Speed; }
 
     void setConfig(uint8_t block, int8_t sda, int8_t scl, uint32_t speed);
 
@@ -70,8 +73,8 @@ public:
 private:
     const uint32_t DEFAULT_SPEED = 400000;
 
-    uint8_t _SDA;
-    uint8_t _SCL;
+    int8_t _SDA;
+    int8_t _SCL;
     i2c_inst_t *_I2C;
     int32_t _Speed;
 

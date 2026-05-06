@@ -138,6 +138,7 @@ bool SwitchProDriver::process(Gamepad * gamepad) {
     switchReport.inputs.rightStick.setY(-std::min(std::max(scaleRightStickY,rightMinY), rightMaxY));
 
     switchReport.rumbleReport = 0x09;
+    updateIMUData(gamepad);
     //switchReport.reportID = inputMode;
 
 	// Wake up TinyUSB device
@@ -523,6 +524,39 @@ void SwitchProDriver::readSPIFlash(uint8_t* dest, uint32_t address, uint8_t size
         // could not find defined address
         //printf("Not Found\n");
         memset(dest, 0xFF, size);
+    }
+}
+
+void SwitchProDriver::updateIMUData(Gamepad *gamepad) {
+    if (
+        !isIMUEnabled ||
+        !gamepad->auxState.sensors.accelerometer.enabled ||
+        !gamepad->auxState.sensors.accelerometer.active ||
+        !gamepad->auxState.sensors.gyroscope.enabled ||
+        !gamepad->auxState.sensors.gyroscope.active
+    ) {
+        memset(switchReport.imuData, 0x00, sizeof(switchReport.imuData));
+        return;
+    }
+
+    for (uint8_t sample = 0; sample < 3; sample++) {
+        writeIMUSample(&switchReport.imuData[sample * 12], gamepad);
+    }
+}
+
+void SwitchProDriver::writeIMUSample(uint8_t *dest, Gamepad *gamepad) {
+    uint16_t values[6] = {
+        gamepad->auxState.sensors.accelerometer.x,
+        gamepad->auxState.sensors.accelerometer.y,
+        gamepad->auxState.sensors.accelerometer.z,
+        gamepad->auxState.sensors.gyroscope.x,
+        gamepad->auxState.sensors.gyroscope.y,
+        gamepad->auxState.sensors.gyroscope.z,
+    };
+
+    for (uint8_t i = 0; i < 6; i++) {
+        dest[i * 2] = values[i] & 0xFF;
+        dest[(i * 2) + 1] = (values[i] >> 8) & 0xFF;
     }
 }
 

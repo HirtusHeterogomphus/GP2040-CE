@@ -191,4 +191,11 @@ export default {
 	'tg16-extension-data-pin2-label': 'データ GPIO 端子 2 (D_SELECT)',
 	'tg16-extension-data-pin3-label': 'データ GPIO 端子 3 (L_RUN)',
 	'tg16-extension-desc-header': 'PCエンジン/TurboGrafx-16 拡張マッピング',
+	'gyro-header-text': 'ジャイロスコープ設定',
+	'gyro-i2c-config-text':
+		'SDA/SCL端子と速度は <1>Peripheral Mapping</1> で設定します',
+	'gyro-address-label': 'LSM6DS3 I2C アドレス',
+	'gyro-address-auto': '自動検出',
+	'gyro-address-6a': '0x6A',
+	'gyro-address-6b': '0x6B',
 };

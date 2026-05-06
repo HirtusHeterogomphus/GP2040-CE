@@ -1886,6 +1886,16 @@ std::string setAddonOptions()
     GamepadUSBHostOptions& gamepadUSBHostOptions = Storage::getInstance().getAddonOptions().gamepadUSBHostOptions;
     docToValue(gamepadUSBHostOptions.enabled, doc, "GamepadUSBHostAddonEnabled");
 
+    GyroOptions& gyroOptions = Storage::getInstance().getAddonOptions().gyroOptions;
+    docToValue(gyroOptions.enabled, doc, "GyroAddonEnabled");
+    docToValue(gyroOptions.address, doc, "gyroAddress");
+    docToValue(gyroOptions.accelAxisX, doc, "gyroAccelAxisX");
+    docToValue(gyroOptions.accelAxisY, doc, "gyroAccelAxisY");
+    docToValue(gyroOptions.accelAxisZ, doc, "gyroAccelAxisZ");
+    docToValue(gyroOptions.gyroAxisX, doc, "gyroGyroAxisX");
+    docToValue(gyroOptions.gyroAxisY, doc, "gyroGyroAxisY");
+    docToValue(gyroOptions.gyroAxisZ, doc, "gyroGyroAxisZ");
+
     AnalogADS1256Options& ads1256Options = Storage::getInstance().getAddonOptions().analogADS1256Options;
     docToValue(ads1256Options.enabled, doc, "Analog1256Enabled");
     docToValue(ads1256Options.spiBlock, doc, "analog1256Block");
@@ -2349,6 +2359,16 @@ std::string getAddonOptions()
 
     const GamepadUSBHostOptions& gamepadUSBHostOptions = Storage::getInstance().getAddonOptions().gamepadUSBHostOptions;
     writeDoc(doc, "GamepadUSBHostAddonEnabled", gamepadUSBHostOptions.enabled);
+
+    const GyroOptions& gyroOptions = Storage::getInstance().getAddonOptions().gyroOptions;
+    writeDoc(doc, "GyroAddonEnabled", gyroOptions.enabled);
+    writeDoc(doc, "gyroAddress", gyroOptions.address);
+    writeDoc(doc, "gyroAccelAxisX", gyroOptions.accelAxisX);
+    writeDoc(doc, "gyroAccelAxisY", gyroOptions.accelAxisY);
+    writeDoc(doc, "gyroAccelAxisZ", gyroOptions.accelAxisZ);
+    writeDoc(doc, "gyroGyroAxisX", gyroOptions.gyroAxisX);
+    writeDoc(doc, "gyroGyroAxisY", gyroOptions.gyroAxisY);
+    writeDoc(doc, "gyroGyroAxisZ", gyroOptions.gyroAxisZ);
 
     AnalogADS1256Options& ads1256Options = Storage::getInstance().getAddonOptions().analogADS1256Options;
     writeDoc(doc, "Analog1256Enabled", ads1256Options.enabled);

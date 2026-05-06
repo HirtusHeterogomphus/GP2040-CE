@@ -217,4 +217,11 @@ export default {
 	'tg16-extension-data-pin2-label': 'Data GPIO Pin 2 (D_SELECT)',
 	'tg16-extension-data-pin3-label': 'Data GPIO Pin 3 (L_RUN)',
 	'tg16-extension-desc-header': 'PC Engine/TurboGrafx-16 Extension Mapping',
+	'gyro-header-text': 'Gyroscope Configuration',
+	'gyro-i2c-config-text':
+		'The SDA and SCL pins and Speed are configured in <1>Peripheral Mapping</1>',
+	'gyro-address-label': 'LSM6DS3 I2C Address',
+	'gyro-address-auto': 'Auto Detect',
+	'gyro-address-6a': '0x6A',
+	'gyro-address-6b': '0x6B',
 };

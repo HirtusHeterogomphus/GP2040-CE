@@ -920,6 +920,20 @@ message HETriggerOptions
     optional int32 smoothingFactor = 13;
 }
 
+message GyroOptions
+{
+    optional bool enabled = 1;
+    // 0 means auto-detect. Supported fixed addresses are 0x6A and 0x6B.
+    optional uint32 address = 2;
+    // Axis mapping values are 1=X, 2=Y, 3=Z. Negative values invert the source axis.
+    optional int32 accelAxisX = 3;
+    optional int32 accelAxisY = 4;
+    optional int32 accelAxisZ = 5;
+    optional int32 gyroAxisX = 6;
+    optional int32 gyroAxisY = 7;
+    optional int32 gyroAxisZ = 8;
+}
+
 message AddonOptions
 {
     optional BootselButtonOptions bootselButtonOptions = 1;
@@ -952,6 +966,7 @@ message AddonOptions
     optional GamepadUSBHostOptions gamepadUSBHostOptions = 28;
     optional TG16Options tg16Options = 29;
     optional HETriggerOptions heTriggerOptions = 30;
+    optional GyroOptions gyroOptions = 31;
 }
 
 message MigrationHistory

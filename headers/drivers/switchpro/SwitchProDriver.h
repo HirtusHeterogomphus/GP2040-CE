@@ -60,6 +60,8 @@ private:
     bool sendReport(uint8_t reportID, const void* reportData, uint16_t reportLength);
 
     void readSPIFlash(uint8_t* dest, uint32_t address, uint8_t size);
+    void updateIMUData(Gamepad *gamepad);
+    void writeIMUSample(uint8_t *dest, Gamepad *gamepad);
 
     void handleConfigReport(uint8_t switchReportID, uint8_t switchReportSubID, const uint8_t *reportData, uint16_t reportLength);
     void handleFeatureReport(uint8_t switchReportID, uint8_t switchReportSubID, const uint8_t *reportData, uint16_t reportLength);

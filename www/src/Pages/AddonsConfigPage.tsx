@@ -61,6 +61,7 @@ import HETrigger, {
 	HETriggerScheme,
 	HETriggerState,
 } from '../Addons/HETrigger';
+import Gyro, { gyroScheme, gyroState } from '../Addons/Gyro';
 
 export type AddonPropTypes = {
 	values: typeof DEFAULT_VALUES;
@@ -91,6 +92,7 @@ const schema = yup.object().shape({
 	...reactiveLEDScheme,
 	...gamepadUSBHostScheme,
 	...HETriggerScheme,
+	...gyroScheme,
 });
 
 export const DEFAULT_VALUES = {
@@ -116,6 +118,7 @@ export const DEFAULT_VALUES = {
 	...reactiveLEDState,
 	...gamepadUSBHostState,
 	...HETriggerState,
+	...gyroState,
 } as const;
 
 const ADDONS = [
@@ -141,6 +144,7 @@ const ADDONS = [
 	DRV8833Rumble,
 	ReactiveLED,
 	HETrigger,
+	Gyro,
 ];
 
 const FormContext = ({ setStoredData }) => {

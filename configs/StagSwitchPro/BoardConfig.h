@@ -48,10 +48,10 @@
 #define ANALOG_ADC_1_MAX_Y          3583
 #define ANALOG_ADC_1_NEUTRAL_X      2048
 #define ANALOG_ADC_1_NEUTRAL_Y      2048
-#define ANALOG_ADC_1_DEADZONE       410
-#define AUTO_CALIBRATE_ENABLED      1
+#define ANALOG_ADC_1_DEADZONE       10
+#define AUTO_CALIBRATE_ENABLED      0
 #define FORCED_CIRCULARITY_ENABLED  1
-#define DIAGONAL_COMPENSATION_STRENGTH  0
+#define DIAGONAL_COMPENSATION_STRENGTH  1
 #define ANALOG_ADC_2_VRX            26
 #define ANALOG_ADC_2_VRY            27
 #define ANALOG_ADC_2_MODE           DPAD_MODE_RIGHT_ANALOG
@@ -62,10 +62,24 @@
 #define ANALOG_ADC_2_MAX_Y          3583
 #define ANALOG_ADC_2_NEUTRAL_X      2048
 #define ANALOG_ADC_2_NEUTRAL_Y      2048
-#define ANALOG_ADC_2_DEADZONE       410
-#define AUTO_CALIBRATE2_ENABLED     1
+#define ANALOG_ADC_2_DEADZONE       10
+#define AUTO_CALIBRATE2_ENABLED     0
 #define FORCED_CIRCULARITY2_ENABLED 1
-#define DIAGONAL_COMPENSATION2_STRENGTH 0
+#define DIAGONAL_COMPENSATION2_STRENGTH 1
+
+// Gyroscope add-on defaults
+// Axis mapping values are 1=X, 2=Y, 3=Z. Negative values invert the source axis.
+#define I2C0_ENABLED       1
+#define I2C0_PIN_SDA       12
+#define I2C0_PIN_SCL       13
+#define GYRO_ENABLED       1
+#define GYRO_ADDRESS       0x6A
+#define GYRO_ACCEL_AXIS_X  2
+#define GYRO_ACCEL_AXIS_Y  1
+#define GYRO_ACCEL_AXIS_Z  3
+#define GYRO_GYRO_AXIS_X   2
+#define GYRO_GYRO_AXIS_Y   1
+#define GYRO_GYRO_AXIS_Z   3
 
 // Setting GPIO pins to assigned by add-on
 //
@@ -98,7 +112,6 @@
 
 #define TURBO_ENABLED 0
 
-#define HAS_I2C_DISPLAY 0
 #define BUTTON_LAYOUT BUTTON_LAYOUT_STICK
 #define BUTTON_LAYOUT_RIGHT BUTTON_LAYOUT_STICKLESSB
 
