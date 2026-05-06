@@ -179,6 +179,7 @@ add_compile_options(-fdata-sections -ffunction-sections)
 add_link_options(-Wl,--gc-sections)
 
 add_subdirectory(lib)
+add_subdirectory(submodules/Pico_AnalogJoystick)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   # Activate some compiler / linker options to aid us with diagnosing stack space issues in Debug builds
@@ -333,6 +334,7 @@ WiiExtension
 SNESpad
 pico_mbedtls
 nanopb
+AnalogJoystick::AnalogJoystick
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC

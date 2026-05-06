@@ -37,14 +37,28 @@
 #define GPIO_PIN_24 GpioAction::BUTTON_PRESS_A1     // A1     | Guide  | Home    | PS       | 13     | ~      |
 #define GPIO_PIN_25 GpioAction::BUTTON_PRESS_S2     // S2     | Start  | Plus    | Start    | 10     | Start  |
 
+#define ANALOG_INPUT_ENABLED        1
+#define ANALOG_ADC_1_VRX            29
+#define ANALOG_ADC_1_VRY            28
+#define ANALOG_ADC_1_MODE           DPAD_MODE_LEFT_ANALOG
+#define ANALOG_ADC_1_INVERT         INVERT_X
+#define DEFAULT_INNER_DEADZONE      10
+#define DEFAULT_OUTER_DEADZONE      75
+#define AUTO_CALIBRATE_ENABLED      1
+#define FORCED_CIRCULARITY_ENABLED  1
+#define ANALOG_ADC_2_VRX            26
+#define ANALOG_ADC_2_VRY            27
+#define ANALOG_ADC_2_MODE           DPAD_MODE_RIGHT_ANALOG
+#define ANALOG_ADC_2_INVERT         INVERT_Y
+#define DEFAULT_INNER_DEADZONE2     10
+#define DEFAULT_OUTER_DEADZONE2     75
+#define AUTO_CALIBRATE2_ENABLED     1
+#define FORCED_CIRCULARITY2_ENABLED 1
+
 // Setting GPIO pins to assigned by add-on
 //
 #define GPIO_PIN_12 GpioAction::ASSIGNED_TO_ADDON
 #define GPIO_PIN_13 GpioAction::ASSIGNED_TO_ADDON
-#define GPIO_PIN_26 GpioAction::ASSIGNED_TO_ADDON
-#define GPIO_PIN_27 GpioAction::ASSIGNED_TO_ADDON
-#define GPIO_PIN_28 GpioAction::ASSIGNED_TO_ADDON
-#define GPIO_PIN_29 GpioAction::ASSIGNED_TO_ADDON   
 
 // Keyboard Mapping Configuration
 //                                            // GP2040 | Xinput | Switch  | PS3/4/5  | Dinput | Arcade |

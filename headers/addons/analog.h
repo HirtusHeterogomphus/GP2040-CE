@@ -6,6 +6,10 @@
 #include "BoardConfig.h"
 #include "enums.pb.h"
 #include "types.h"
+#include "AnalogJoystick.h"
+#include "DiagonalCompensation.h"
+
+#include <memory>
 
 #ifndef ANALOG_INPUT_ENABLED
 #define ANALOG_INPUT_ENABLED 0
@@ -108,28 +112,26 @@ typedef struct
 {
     Pin_t x_pin;
     Pin_t y_pin;
-    Pin_t x_pin_adc;
-    Pin_t y_pin_adc;
-    float x_value;
-    float y_value;
     uint16_t x_center;
     uint16_t y_center;
-    float xy_magnitude;
-    float x_magnitude;
-    float y_magnitude;
     InvertMode analog_invert;
     DpadMode analog_dpad;
-    float x_ema;
-    float y_ema;
+    uint16_t x_ema;
+    uint16_t y_ema;
     bool ema_option;
     float ema_smoothing;
-    float error_rate;
-    float in_deadzone;
-    float out_deadzone;
+    float compensation_factor;
+    uint32_t inner_deadzone;
+    uint32_t outer_deadzone;
     bool auto_calibration;
     bool forced_circularity;
     uint32_t joystick_center_x;
     uint32_t joystick_center_y;
+    bool configured;
+    AnalogJoystickCalibration calibration;
+    std::unique_ptr<AnalogJoystick> joystick;
+    std::unique_ptr<DiagonalCompensation> diagonal_compensation;
+    AnalogBase * input;
 } adc_instance;
 
 class AnalogInput : public GPAddon {
@@ -142,11 +144,23 @@ public:
     virtual void reinit() {}
     virtual std::string name() { return AnalogName; }
 private:
-    float readPin(int stick_num, Pin_t pin, uint16_t center);
-    float emaCalculation(int stick_num, float ema_value, float ema_previous);
-    uint16_t map(uint16_t x, uint16_t in_min, uint16_t in_max, uint16_t out_min, uint16_t out_max);
-    float magnitudeCalculation(int stick_num, adc_instance & adc_inst);
-    void radialDeadzone(int stick_num, adc_instance & adc_inst);
+    void configureStick(
+        int stick_num,
+        Pin_t x_pin,
+        Pin_t y_pin,
+        InvertMode analog_invert,
+        DpadMode analog_dpad,
+        bool ema_option,
+        float ema_smoothing,
+        uint32_t inner_deadzone,
+        uint32_t outer_deadzone,
+        bool auto_calibration,
+        bool forced_circularity,
+        uint32_t joystick_center_x,
+        uint32_t joystick_center_y,
+        uint32_t analog_error);
+    uint16_t emaCalculation(int stick_num, uint16_t ema_value, uint16_t ema_previous);
+    uint16_t scaleAnalogValue(uint16_t value, uint32_t joystickMid, uint32_t joystickMax);
     adc_instance adc_pairs[ADC_COUNT];
 };
 
