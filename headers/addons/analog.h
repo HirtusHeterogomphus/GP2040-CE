@@ -6,6 +6,10 @@
 #include "BoardConfig.h"
 #include "enums.pb.h"
 #include "types.h"
+#include "AnalogJoystick.h"
+#include "DiagonalCompensation.h"
+
+#include <memory>
 
 #ifndef ANALOG_INPUT_ENABLED
 #define ANALOG_INPUT_ENABLED 0
@@ -67,6 +71,62 @@
 #define DEFAULT_OUTER_DEADZONE2 95
 #endif
 
+#ifndef ANALOG_ADC_1_NEUTRAL_X
+#define ANALOG_ADC_1_NEUTRAL_X 2048
+#endif
+
+#ifndef ANALOG_ADC_1_NEUTRAL_Y
+#define ANALOG_ADC_1_NEUTRAL_Y 2048
+#endif
+
+#ifndef ANALOG_ADC_1_MIN_X
+#define ANALOG_ADC_1_MIN_X (ANALOG_ADC_1_NEUTRAL_X - ((ANALOG_ADC_1_NEUTRAL_X * DEFAULT_OUTER_DEADZONE) / 100))
+#endif
+
+#ifndef ANALOG_ADC_1_MAX_X
+#define ANALOG_ADC_1_MAX_X (ANALOG_ADC_1_NEUTRAL_X + (((4095 - ANALOG_ADC_1_NEUTRAL_X) * DEFAULT_OUTER_DEADZONE) / 100))
+#endif
+
+#ifndef ANALOG_ADC_1_MIN_Y
+#define ANALOG_ADC_1_MIN_Y (ANALOG_ADC_1_NEUTRAL_Y - ((ANALOG_ADC_1_NEUTRAL_Y * DEFAULT_OUTER_DEADZONE) / 100))
+#endif
+
+#ifndef ANALOG_ADC_1_MAX_Y
+#define ANALOG_ADC_1_MAX_Y (ANALOG_ADC_1_NEUTRAL_Y + (((4095 - ANALOG_ADC_1_NEUTRAL_Y) * DEFAULT_OUTER_DEADZONE) / 100))
+#endif
+
+#ifndef ANALOG_ADC_1_DEADZONE
+#define ANALOG_ADC_1_DEADZONE ((4095 * DEFAULT_INNER_DEADZONE) / 100)
+#endif
+
+#ifndef ANALOG_ADC_2_NEUTRAL_X
+#define ANALOG_ADC_2_NEUTRAL_X 2048
+#endif
+
+#ifndef ANALOG_ADC_2_NEUTRAL_Y
+#define ANALOG_ADC_2_NEUTRAL_Y 2048
+#endif
+
+#ifndef ANALOG_ADC_2_MIN_X
+#define ANALOG_ADC_2_MIN_X (ANALOG_ADC_2_NEUTRAL_X - ((ANALOG_ADC_2_NEUTRAL_X * DEFAULT_OUTER_DEADZONE2) / 100))
+#endif
+
+#ifndef ANALOG_ADC_2_MAX_X
+#define ANALOG_ADC_2_MAX_X (ANALOG_ADC_2_NEUTRAL_X + (((4095 - ANALOG_ADC_2_NEUTRAL_X) * DEFAULT_OUTER_DEADZONE2) / 100))
+#endif
+
+#ifndef ANALOG_ADC_2_MIN_Y
+#define ANALOG_ADC_2_MIN_Y (ANALOG_ADC_2_NEUTRAL_Y - ((ANALOG_ADC_2_NEUTRAL_Y * DEFAULT_OUTER_DEADZONE2) / 100))
+#endif
+
+#ifndef ANALOG_ADC_2_MAX_Y
+#define ANALOG_ADC_2_MAX_Y (ANALOG_ADC_2_NEUTRAL_Y + (((4095 - ANALOG_ADC_2_NEUTRAL_Y) * DEFAULT_OUTER_DEADZONE2) / 100))
+#endif
+
+#ifndef ANALOG_ADC_2_DEADZONE
+#define ANALOG_ADC_2_DEADZONE ((4095 * DEFAULT_INNER_DEADZONE2) / 100)
+#endif
+
 #ifndef AUTO_CALIBRATE_ENABLED
 #define AUTO_CALIBRATE_ENABLED 0
 #endif
@@ -99,6 +159,16 @@
 #define ANALOG_ERROR2 1000
 #endif
 
+#define LEGACY_ANALOG_ERROR_TO_DIAGONAL_COMPENSATION(value) (((value) >= 1000) ? 0 : ((1000 - (value) + 5) / 10))
+
+#ifndef DIAGONAL_COMPENSATION_STRENGTH
+#define DIAGONAL_COMPENSATION_STRENGTH LEGACY_ANALOG_ERROR_TO_DIAGONAL_COMPENSATION(ANALOG_ERROR)
+#endif
+
+#ifndef DIAGONAL_COMPENSATION2_STRENGTH
+#define DIAGONAL_COMPENSATION2_STRENGTH LEGACY_ANALOG_ERROR_TO_DIAGONAL_COMPENSATION(ANALOG_ERROR2)
+#endif
+
 // Analog Module Name
 #define AnalogName "Analog"
 
@@ -108,28 +178,30 @@ typedef struct
 {
     Pin_t x_pin;
     Pin_t y_pin;
-    Pin_t x_pin_adc;
-    Pin_t y_pin_adc;
-    float x_value;
-    float y_value;
     uint16_t x_center;
     uint16_t y_center;
-    float xy_magnitude;
-    float x_magnitude;
-    float y_magnitude;
     InvertMode analog_invert;
     DpadMode analog_dpad;
-    float x_ema;
-    float y_ema;
+    uint16_t x_ema;
+    uint16_t y_ema;
     bool ema_option;
     float ema_smoothing;
-    float error_rate;
-    float in_deadzone;
-    float out_deadzone;
+    float compensation_factor;
+    uint32_t diagonal_compensation_strength;
     bool auto_calibration;
     bool forced_circularity;
+    uint32_t joystick_min_x;
+    uint32_t joystick_max_x;
+    uint32_t joystick_min_y;
+    uint32_t joystick_max_y;
     uint32_t joystick_center_x;
     uint32_t joystick_center_y;
+    uint32_t joystick_deadzone;
+    bool configured;
+    AnalogJoystickCalibration calibration;
+    std::unique_ptr<AnalogJoystick> joystick;
+    std::unique_ptr<DiagonalCompensation> diagonal_compensation;
+    AnalogBase * input;
 } adc_instance;
 
 class AnalogInput : public GPAddon {
@@ -142,11 +214,26 @@ public:
     virtual void reinit() {}
     virtual std::string name() { return AnalogName; }
 private:
-    float readPin(int stick_num, Pin_t pin, uint16_t center);
-    float emaCalculation(int stick_num, float ema_value, float ema_previous);
-    uint16_t map(uint16_t x, uint16_t in_min, uint16_t in_max, uint16_t out_min, uint16_t out_max);
-    float magnitudeCalculation(int stick_num, adc_instance & adc_inst);
-    void radialDeadzone(int stick_num, adc_instance & adc_inst);
+    void configureStick(
+        int stick_num,
+        Pin_t x_pin,
+        Pin_t y_pin,
+        InvertMode analog_invert,
+        DpadMode analog_dpad,
+        bool ema_option,
+        float ema_smoothing,
+        bool auto_calibration,
+        bool forced_circularity,
+        uint32_t joystick_min_x,
+        uint32_t joystick_max_x,
+        uint32_t joystick_min_y,
+        uint32_t joystick_max_y,
+        uint32_t joystick_center_x,
+        uint32_t joystick_center_y,
+        uint32_t joystick_deadzone,
+        uint32_t diagonal_compensation);
+    uint16_t emaCalculation(int stick_num, uint16_t ema_value, uint16_t ema_previous);
+    uint16_t scaleAnalogValue(uint16_t value, uint32_t joystickMid, uint32_t joystickMax);
     adc_instance adc_pairs[ADC_COUNT];
 };
 

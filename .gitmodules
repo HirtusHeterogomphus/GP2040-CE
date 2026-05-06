@@ -5,3 +5,6 @@
 	path = lib/pico_pio_usb
 	url = https://github.com/OpenStickCommunity/Pico-PIO-USB.git
 	branch = dev
+[submodule "submodules/Pico_AnalogJoystick"]
+	path = submodules/Pico_AnalogJoystick
+	url = https://github.com/HirtusHeterogomphus/Pico_AnalogJoystick
