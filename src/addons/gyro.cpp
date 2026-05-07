@@ -87,41 +87,21 @@ void GyroAddon::process() {
 
     bool accelerationRead = sensor->readAcceleration(x, y, z);
     if (accelerationRead) {
-        uint16_t accelX = scaleAcceleration(x);
-        uint16_t accelY = scaleAcceleration(y);
-        uint16_t accelZ = scaleAcceleration(z);
-        gamepad->auxState.sensors.accelerometer.x = mapAxisValue(accelX, accelY, accelZ, options.accelAxisX, GYRO_ACCEL_AXIS_X);
-        gamepad->auxState.sensors.accelerometer.y = mapAxisValue(accelX, accelY, accelZ, options.accelAxisY, GYRO_ACCEL_AXIS_Y);
-        gamepad->auxState.sensors.accelerometer.z = mapAxisValue(accelX, accelY, accelZ, options.accelAxisZ, GYRO_ACCEL_AXIS_Z);
+        gamepad->auxState.sensors.accelerometer.x = mapAxisValue(x, y, z, options.accelAxisX, GYRO_ACCEL_AXIS_X);
+        gamepad->auxState.sensors.accelerometer.y = mapAxisValue(x, y, z, options.accelAxisY, GYRO_ACCEL_AXIS_Y);
+        gamepad->auxState.sensors.accelerometer.z = mapAxisValue(x, y, z, options.accelAxisZ, GYRO_ACCEL_AXIS_Z);
     }
     gamepad->auxState.sensors.accelerometer.active = accelerationRead;
 
     bool gyroRead = sensor->readGyroscope(x, y, z);
     if (gyroRead) {
-        uint16_t gyroX = scaleGyroscope(x);
-        uint16_t gyroY = scaleGyroscope(y);
-        uint16_t gyroZ = scaleGyroscope(z);
-        gamepad->auxState.sensors.gyroscope.x = mapAxisValue(gyroX, gyroY, gyroZ, options.gyroAxisX, GYRO_GYRO_AXIS_X);
-        gamepad->auxState.sensors.gyroscope.y = mapAxisValue(gyroX, gyroY, gyroZ, options.gyroAxisY, GYRO_GYRO_AXIS_Y);
-        gamepad->auxState.sensors.gyroscope.z = mapAxisValue(gyroX, gyroY, gyroZ, options.gyroAxisZ, GYRO_GYRO_AXIS_Z);
+        gamepad->auxState.sensors.gyroscope.x = mapAxisValue(x, y, z, options.gyroAxisX, GYRO_GYRO_AXIS_X);
+        gamepad->auxState.sensors.gyroscope.y = mapAxisValue(x, y, z, options.gyroAxisY, GYRO_GYRO_AXIS_Y);
+        gamepad->auxState.sensors.gyroscope.z = mapAxisValue(x, y, z, options.gyroAxisZ, GYRO_GYRO_AXIS_Z);
     }
     gamepad->auxState.sensors.gyroscope.active = gyroRead;
 
     nextTimer = getMillis() + POLL_INTERVAL_MS;
-}
-
-uint16_t GyroAddon::scaleAcceleration(float value) {
-    return scaleSigned(value, 4.0f);
-}
-
-uint16_t GyroAddon::scaleGyroscope(float value) {
-    return scaleSigned(value, 2000.0f);
-}
-
-uint16_t GyroAddon::scaleSigned(float value, float range) {
-    int32_t scaled = static_cast<int32_t>((value / range) * 32767.0f);
-    scaled = std::min(std::max(scaled, (int32_t)-32768), (int32_t)32767);
-    return static_cast<uint16_t>(static_cast<int16_t>(scaled));
 }
 
 uint16_t GyroAddon::mapAxisValue(uint16_t x, uint16_t y, uint16_t z, int32_t axis, int32_t fallbackAxis) {
