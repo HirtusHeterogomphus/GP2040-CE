@@ -1,5 +1,5 @@
-import { useContext } from 'react';
-import { FormCheck, FormLabel } from 'react-bootstrap';
+import { useContext, useState } from 'react';
+import { Alert, Button, FormCheck, FormLabel } from 'react-bootstrap';
 import { Trans, useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 import * as yup from 'yup';
@@ -7,6 +7,7 @@ import * as yup from 'yup';
 import Section from '../Components/Section';
 import { AppContext } from '../Contexts/AppContext';
 import { AddonPropTypes } from '../Pages/AddonsConfigPage';
+import WebApi from '../Services/WebApi';
 
 export const gyroScheme = {
 	GyroAddonEnabled: yup.number().required().label('Gyroscope Add-On Enabled'),
@@ -17,6 +18,12 @@ export const gyroScheme = {
 	gyroGyroAxisX: yup.number().oneOf([-3, -2, -1, 1, 2, 3]),
 	gyroGyroAxisY: yup.number().oneOf([-3, -2, -1, 1, 2, 3]),
 	gyroGyroAxisZ: yup.number().oneOf([-3, -2, -1, 1, 2, 3]),
+	gyroAccelOffsetX: yup.number(),
+	gyroAccelOffsetY: yup.number(),
+	gyroAccelOffsetZ: yup.number(),
+	gyroGyroOffsetX: yup.number(),
+	gyroGyroOffsetY: yup.number(),
+	gyroGyroOffsetZ: yup.number(),
 };
 
 export const gyroState = {
@@ -28,6 +35,12 @@ export const gyroState = {
 	gyroGyroAxisX: 1,
 	gyroGyroAxisY: 2,
 	gyroGyroAxisZ: 3,
+	gyroAccelOffsetX: 0,
+	gyroAccelOffsetY: 0,
+	gyroAccelOffsetZ: 0,
+	gyroGyroOffsetX: 0,
+	gyroGyroOffsetY: 0,
+	gyroGyroOffsetZ: 0,
 };
 
 const GYRO_ADDRESS_OPTIONS = [
@@ -36,10 +49,51 @@ const GYRO_ADDRESS_OPTIONS = [
 	{ label: 'gyro-address-6b', value: 0x6b },
 ];
 
-const Gyro = ({ values, handleChange, handleCheckbox }: AddonPropTypes) => {
+const GYRO_OFFSET_FIELDS = [
+	{ name: 'gyroAccelOffsetX', label: 'gyro-offset-accel-x' },
+	{ name: 'gyroAccelOffsetY', label: 'gyro-offset-accel-y' },
+	{ name: 'gyroAccelOffsetZ', label: 'gyro-offset-accel-z' },
+	{ name: 'gyroGyroOffsetX', label: 'gyro-offset-gyro-x' },
+	{ name: 'gyroGyroOffsetY', label: 'gyro-offset-gyro-y' },
+	{ name: 'gyroGyroOffsetZ', label: 'gyro-offset-gyro-z' },
+] as const;
+
+const Gyro = ({ values, handleChange, handleCheckbox, setFieldValue }: AddonPropTypes) => {
 	const { t } = useTranslation();
 	const { getAvailablePeripherals } = useContext(AppContext);
 	const i2cAvailable = getAvailablePeripherals('i2c');
+	const [isMeasuring, setIsMeasuring] = useState(false);
+	const [measureMessage, setMeasureMessage] = useState('');
+	const [measureError, setMeasureError] = useState(false);
+
+	const measureOffsets = async () => {
+		setIsMeasuring(true);
+		setMeasureMessage('');
+		setMeasureError(false);
+
+		const result = await WebApi.measureGyroOffsets({
+			gyroAddress: Number(values.gyroAddress),
+		});
+
+		if (result?.success) {
+			setFieldValue('gyroAccelOffsetX', result.accelOffsetX);
+			setFieldValue('gyroAccelOffsetY', result.accelOffsetY);
+			setFieldValue('gyroAccelOffsetZ', result.accelOffsetZ);
+			setFieldValue('gyroGyroOffsetX', result.gyroOffsetX);
+			setFieldValue('gyroGyroOffsetY', result.gyroOffsetY);
+			setFieldValue('gyroGyroOffsetZ', result.gyroOffsetZ);
+			setMeasureMessage(t('AddonsConfig:gyro-offset-measure-success'));
+		} else {
+			setMeasureError(true);
+			setMeasureMessage(
+				t('AddonsConfig:gyro-offset-measure-failed', {
+					error: result?.error || 'unknown error',
+				}),
+			);
+		}
+
+		setIsMeasuring(false);
+	};
 
 	return (
 		<Section title={t('AddonsConfig:gyro-header-text')}>
@@ -70,6 +124,48 @@ const Gyro = ({ values, handleChange, handleCheckbox }: AddonPropTypes) => {
 								</option>
 							))}
 						</select>
+					</div>
+				</div>
+				<div className="row mb-3">
+					{GYRO_OFFSET_FIELDS.map((field) => (
+						<div className="col-sm-6 col-md-4 col-lg-2" key={field.name}>
+							<label className="form-label" htmlFor={field.name}>
+								{t(`AddonsConfig:${field.label}`)}
+							</label>
+							<input
+								className="form-control"
+								id={field.name}
+								name={field.name}
+								type="number"
+								value={values[field.name]}
+								onChange={handleChange}
+							/>
+						</div>
+					))}
+				</div>
+				<div className="row mb-3">
+					<div className="col-sm-12">
+						<Button
+							type="button"
+							variant="secondary"
+							disabled={isMeasuring}
+							onClick={measureOffsets}
+						>
+							{isMeasuring
+								? t('AddonsConfig:gyro-offset-measuring-button')
+								: t('AddonsConfig:gyro-offset-measure-button')}
+						</Button>
+						<div className="form-text">
+							{t('AddonsConfig:gyro-offset-save-notice')}
+						</div>
+						{measureMessage ? (
+							<Alert
+								className="mt-2 mb-0"
+								variant={measureError ? 'danger' : 'success'}
+							>
+								{measureMessage}
+							</Alert>
+						) : null}
 					</div>
 				</div>
 			</div>

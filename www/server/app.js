@@ -586,6 +586,20 @@ app.get('/api/getAddonsOptions', (req, res) => {
 		DRV8833RumbleAddonEnabled: 1,
 		ReactiveLEDAddonEnabled: 1,
 		GamepadUSBHostAddonEnabled: 1,
+		GyroAddonEnabled: 1,
+		gyroAddress: 0x6a,
+		gyroAccelAxisX: 1,
+		gyroAccelAxisY: 2,
+		gyroAccelAxisZ: 3,
+		gyroGyroAxisX: 1,
+		gyroGyroAxisY: 2,
+		gyroGyroAxisZ: 3,
+		gyroAccelOffsetX: 0,
+		gyroAccelOffsetY: 0,
+		gyroAccelOffsetZ: 0,
+		gyroGyroOffsetX: 0,
+		gyroGyroOffsetY: 0,
+		gyroGyroOffsetZ: 0,
 		tg16PadOePin: -1,
 		tg16PadSelectPin: -1,
 		tg16PadDataPin0: -1,
@@ -940,6 +954,20 @@ app.post('/api/getHETriggerVoltage', (req, res) => {
 	return res.send({
 		voltage: 0.0,
 		debug: true
+	});
+});
+
+app.post('/api/measureGyroOffsets', (req, res) => {
+	return res.send({
+		success: true,
+		block: 0,
+		address: req.body?.gyroAddress || 0x6a,
+		accelOffsetX: 12,
+		accelOffsetY: -8,
+		accelOffsetZ: 1024,
+		gyroOffsetX: 3,
+		gyroOffsetY: -2,
+		gyroOffsetZ: 1,
 	});
 });
 

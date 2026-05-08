@@ -224,4 +224,16 @@ export default {
 	'gyro-address-auto': 'Auto Detect',
 	'gyro-address-6a': '0x6A',
 	'gyro-address-6b': '0x6B',
+	'gyro-offset-accel-x': 'Accel X Offset',
+	'gyro-offset-accel-y': 'Accel Y Offset',
+	'gyro-offset-accel-z': 'Accel Z Offset',
+	'gyro-offset-gyro-x': 'Gyro X Offset',
+	'gyro-offset-gyro-y': 'Gyro Y Offset',
+	'gyro-offset-gyro-z': 'Gyro Z Offset',
+	'gyro-offset-measure-button': 'Measure Offset',
+	'gyro-offset-measuring-button': 'Measuring...',
+	'gyro-offset-measure-success': 'Gyro offsets measured. Save configuration to apply them.',
+	'gyro-offset-measure-failed': 'Gyro offset measurement failed: {{error}}',
+	'gyro-offset-save-notice':
+		'Keep the controller still while measuring. Save and reboot to apply new offsets.',
 };

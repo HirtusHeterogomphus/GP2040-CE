@@ -932,6 +932,12 @@ message GyroOptions
     optional int32 gyroAxisX = 6;
     optional int32 gyroAxisY = 7;
     optional int32 gyroAxisZ = 8;
+    optional int32 accelOffsetX = 9;
+    optional int32 accelOffsetY = 10;
+    optional int32 accelOffsetZ = 11;
+    optional int32 gyroOffsetX = 12;
+    optional int32 gyroOffsetY = 13;
+    optional int32 gyroOffsetZ = 14;
 }
 
 message AddonOptions

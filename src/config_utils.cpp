@@ -1170,6 +1170,12 @@ void ConfigUtils::initUnsetPropertiesWithDefaults(Config& config)
     INIT_UNSET_PROPERTY(config.addonOptions.gyroOptions, gyroAxisX, GYRO_GYRO_AXIS_X);
     INIT_UNSET_PROPERTY(config.addonOptions.gyroOptions, gyroAxisY, GYRO_GYRO_AXIS_Y);
     INIT_UNSET_PROPERTY(config.addonOptions.gyroOptions, gyroAxisZ, GYRO_GYRO_AXIS_Z);
+    INIT_UNSET_PROPERTY(config.addonOptions.gyroOptions, accelOffsetX, GYRO_ACCEL_OFFSET_X);
+    INIT_UNSET_PROPERTY(config.addonOptions.gyroOptions, accelOffsetY, GYRO_ACCEL_OFFSET_Y);
+    INIT_UNSET_PROPERTY(config.addonOptions.gyroOptions, accelOffsetZ, GYRO_ACCEL_OFFSET_Z);
+    INIT_UNSET_PROPERTY(config.addonOptions.gyroOptions, gyroOffsetX, GYRO_GYRO_OFFSET_X);
+    INIT_UNSET_PROPERTY(config.addonOptions.gyroOptions, gyroOffsetY, GYRO_GYRO_OFFSET_Y);
+    INIT_UNSET_PROPERTY(config.addonOptions.gyroOptions, gyroOffsetZ, GYRO_GYRO_OFFSET_Z);
 
     // Macro options (always on)
     INIT_UNSET_PROPERTY(config.addonOptions.macroOptions, enabled, true);

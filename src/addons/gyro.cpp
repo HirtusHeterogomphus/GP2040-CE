@@ -57,6 +57,16 @@ bool GyroAddon::tryStartSensor(PeripheralI2C *candidateI2C, uint8_t address) {
         return false;
     }
 
+    const GyroOptions& options = Storage::getInstance().getAddonOptions().gyroOptions;
+    candidateSensor->setOffsets(
+        options.accelOffsetX,
+        options.accelOffsetY,
+        options.accelOffsetZ,
+        options.gyroOffsetX,
+        options.gyroOffsetY,
+        options.gyroOffsetZ
+    );
+
     i2c = candidateI2C;
     sensor = candidateSensor;
     started = true;
@@ -80,9 +90,9 @@ void GyroAddon::process() {
         return;
     }
 
-    float x = 0.0f;
-    float y = 0.0f;
-    float z = 0.0f;
+    int16_t x = 0;
+    int16_t y = 0;
+    int16_t z = 0;
     const GyroOptions& options = Storage::getInstance().getAddonOptions().gyroOptions;
 
     bool accelerationRead = sensor->readAcceleration(x, y, z);

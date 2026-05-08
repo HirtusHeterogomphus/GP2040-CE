@@ -43,6 +43,30 @@
 #define GYRO_GYRO_AXIS_Z 3
 #endif
 
+#ifndef GYRO_ACCEL_OFFSET_X
+#define GYRO_ACCEL_OFFSET_X 0
+#endif
+
+#ifndef GYRO_ACCEL_OFFSET_Y
+#define GYRO_ACCEL_OFFSET_Y 0
+#endif
+
+#ifndef GYRO_ACCEL_OFFSET_Z
+#define GYRO_ACCEL_OFFSET_Z 0
+#endif
+
+#ifndef GYRO_GYRO_OFFSET_X
+#define GYRO_GYRO_OFFSET_X 0
+#endif
+
+#ifndef GYRO_GYRO_OFFSET_Y
+#define GYRO_GYRO_OFFSET_Y 0
+#endif
+
+#ifndef GYRO_GYRO_OFFSET_Z
+#define GYRO_GYRO_OFFSET_Z 0
+#endif
+
 class GyroAddon : public GPAddon {
 public:
     virtual bool available();
