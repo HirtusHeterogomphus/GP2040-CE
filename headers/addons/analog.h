@@ -232,7 +232,6 @@ private:
         uint32_t joystick_center_y,
         uint32_t joystick_deadzone,
         uint32_t diagonal_compensation);
-    uint16_t emaCalculation(int stick_num, uint16_t ema_value, uint16_t ema_previous);
     uint16_t scaleAnalogValue(uint16_t value, uint32_t joystickMid, uint32_t joystickMax);
     adc_instance adc_pairs[ADC_COUNT];
 };
