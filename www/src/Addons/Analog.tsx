@@ -1,6 +1,6 @@
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FormCheck, Row, Tab, Tabs } from 'react-bootstrap';
+import { FormCheck, Row, Spinner, Tab, Tabs } from 'react-bootstrap';
 import * as yup from 'yup';
 
 import Section from '../Components/Section';
@@ -23,44 +23,25 @@ const INVERT_MODES = [
 	{ label: 'X/Y Axis', value: 3 },
 ];
 
-type CalibrationPosition = 'neutral' | 'left' | 'right' | 'up' | 'down';
+const ADC_MAX = 4095;
+const CALIBRATION_SAMPLE_DURATION_MS = 5000;
+const CALIBRATION_SAMPLE_INTERVAL_MS = 50;
+const MIN_CALIBRATION_TRAVEL = 32;
 
 type CalibrationPoint = {
 	x: number;
 	y: number;
 };
 
-const CALIBRATION_POSITIONS: {
-	position: CalibrationPosition;
-	labelKey: string;
-	defaultLabel: string;
-}[] = [
-	{
-		position: 'neutral',
-		labelKey: 'AddonsConfig:analog-calibration-direction-neutral',
-		defaultLabel: 'Neutral',
-	},
-	{
-		position: 'left',
-		labelKey: 'AddonsConfig:analog-calibration-direction-left',
-		defaultLabel: 'Left',
-	},
-	{
-		position: 'right',
-		labelKey: 'AddonsConfig:analog-calibration-direction-right',
-		defaultLabel: 'Right',
-	},
-	{
-		position: 'up',
-		labelKey: 'AddonsConfig:analog-calibration-direction-up',
-		defaultLabel: 'Up',
-	},
-	{
-		position: 'down',
-		labelKey: 'AddonsConfig:analog-calibration-direction-down',
-		defaultLabel: 'Down',
-	},
-];
+type CalibrationRange = {
+	minX: number;
+	maxX: number;
+	minY: number;
+	maxY: number;
+	samples: number;
+};
+
+const wait = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 export const analogScheme = {
 	AnalogInputEnabled: yup.number().required().label('Analog Input Enabled'),
@@ -256,82 +237,134 @@ export const analogState = {
 const Analog = ({ values, errors, handleChange, handleCheckbox, setFieldValue }: AddonPropTypes) => {
 	const { usedPins } = useContext(AppContext);
 	const { t } = useTranslation();
+	const [calibratingStick, setCalibratingStick] = useState<1 | 2 | null>(null);
 	const availableAnalogPins = ANALOG_PINS.filter(
 		(pin) => !usedPins?.includes(pin),
 	);
+
+	const readJoystickSample = async (endpoint: string): Promise<CalibrationPoint> => {
+		const res = await fetch(endpoint);
+
+		if (!res.ok) {
+			throw new Error(`HTTP error! status: ${res.status}`);
+		}
+
+		const data = await res.json();
+
+		if (!data.success || data.error) {
+			throw new Error(data.error || 'Unknown error');
+		}
+
+		const x = Number(data.x);
+		const y = Number(data.y);
+
+		if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || x > ADC_MAX || y < 0 || y > ADC_MAX) {
+			throw new Error('Invalid joystick ADC sample');
+		}
+
+		return {
+			x: Math.round(x),
+			y: Math.round(y),
+		};
+	};
+
 	const runCalibration = async (stick: 1 | 2) => {
 		const endpoint = stick === 1 ? '/api/getJoystickCenter' : '/api/getJoystickCenter2';
 		const suffix = stick === 1 ? '' : '2';
-		const calibrationValues = {} as Record<CalibrationPosition, CalibrationPoint>;
+		const seconds = Math.ceil(CALIBRATION_SAMPLE_DURATION_MS / 1000);
 
 		try {
-			for (let i = 0; i < CALIBRATION_POSITIONS.length; i++) {
-				const step = CALIBRATION_POSITIONS[i];
-				const stepNumber = i + 1;
-				const direction = t(step.labelKey, { defaultValue: step.defaultLabel });
-				const instructionKey = step.position === 'neutral'
-					? 'AddonsConfig:analog-calibration-step-instruction-neutral'
-					: 'AddonsConfig:analog-calibration-step-instruction-axis';
-				const instructionDefault = step.position === 'neutral'
-					? 'Release stick {{stick}} to neutral, then click "OK" to record neutral.'
-					: 'Hold stick {{stick}} fully {{direction}}, then click "OK" while holding it.';
-
-				const userConfirmed = confirm(
-					t('AddonsConfig:analog-calibration-step-title-axis', {
-						step: stepNumber,
-						total: CALIBRATION_POSITIONS.length,
-						defaultValue: 'Calibration Step {{step}}/{{total}}',
-					}) + '\n\n' +
-					t(instructionKey, {
-						stick: String(stick),
-						direction,
-						defaultValue: instructionDefault,
-					}) + '\n\n' +
-					t('AddonsConfig:analog-calibration-step-confirm-axis', {
-						defaultValue: 'Click "OK" to record this value.',
-					})
-				);
-
-				if (!userConfirmed) {
-					alert(t('AddonsConfig:analog-calibration-cancelled', {
-						defaultValue: 'Calibration cancelled',
-					}));
-					return;
-				}
-
-				console.log(`Fetching joystick ${stick} ${step.position} calibration value...`);
-				const res = await fetch(endpoint);
-				console.log('Response status:', res.status);
-
-				if (!res.ok) {
-					throw new Error(`HTTP error! status: ${res.status}`);
-				}
-
-				const data = await res.json();
-				console.log('Response data:', data);
-
-				if (!data.success || data.error) {
-					alert(t('AddonsConfig:analog-calibration-failed', {
-						error: data.error || 'Unknown error',
-						defaultValue: 'Calibration failed: {{error}}',
-					}));
-					console.error('API Error:', data.error);
-					return;
-				}
-
-				calibrationValues[step.position] = {
-					x: data.x || 0,
-					y: data.y || 0,
-				};
-
-				console.log(`Step ${stepNumber} completed:`, calibrationValues[step.position]);
+			if (!confirm(
+				t('AddonsConfig:analog-calibration-neutral-prompt', {
+					stick: String(stick),
+					defaultValue: 'Release stick {{stick}} to neutral, then click "OK" to record the neutral position.',
+				})
+			)) {
+				alert(t('AddonsConfig:analog-calibration-cancelled', {
+					defaultValue: 'Calibration cancelled',
+				}));
+				return;
 			}
 
-			const neutral = calibrationValues.neutral;
-			const minX = Math.min(calibrationValues.left.x, calibrationValues.right.x);
-			const maxX = Math.max(calibrationValues.left.x, calibrationValues.right.x);
-			const minY = Math.min(calibrationValues.up.y, calibrationValues.down.y);
-			const maxY = Math.max(calibrationValues.up.y, calibrationValues.down.y);
+			const neutral = await readJoystickSample(endpoint);
+			const range: CalibrationRange = {
+				minX: neutral.x,
+				maxX: neutral.x,
+				minY: neutral.y,
+				maxY: neutral.y,
+				samples: 0,
+			};
+
+			if (!confirm(
+				t('AddonsConfig:analog-calibration-rotation-prompt', {
+					stick: String(stick),
+					seconds,
+					defaultValue: 'After clicking "OK", rotate stick {{stick}} around its outer edge for {{seconds}} seconds.',
+				})
+			)) {
+				alert(t('AddonsConfig:analog-calibration-cancelled', {
+					defaultValue: 'Calibration cancelled',
+				}));
+				return;
+			}
+
+			setCalibratingStick(stick);
+			try {
+				const endTime = Date.now() + CALIBRATION_SAMPLE_DURATION_MS;
+				while (Date.now() < endTime) {
+					const sample = await readJoystickSample(endpoint);
+
+					range.minX = Math.min(range.minX, sample.x);
+					range.maxX = Math.max(range.maxX, sample.x);
+					range.minY = Math.min(range.minY, sample.y);
+					range.maxY = Math.max(range.maxY, sample.y);
+					range.samples += 1;
+
+					await wait(CALIBRATION_SAMPLE_INTERVAL_MS);
+				}
+			} finally {
+				setCalibratingStick(null);
+			}
+
+			const rawDeadzone = Number(values[`joystickDeadzone${suffix}`]);
+			const minimumTravel = Math.max(
+				Number.isFinite(rawDeadzone) ? rawDeadzone : 0,
+				MIN_CALIBRATION_TRAVEL,
+			);
+			const travel = {
+				xLow: neutral.x - range.minX,
+				xHigh: range.maxX - neutral.x,
+				yLow: neutral.y - range.minY,
+				yHigh: range.maxY - neutral.y,
+			};
+
+			if (
+				range.samples === 0 ||
+				range.minX >= neutral.x ||
+				range.maxX <= neutral.x ||
+				range.minY >= neutral.y ||
+				range.maxY <= neutral.y
+			) {
+				throw new Error(t('AddonsConfig:analog-calibration-invalid-range', {
+					defaultValue: 'Calibration failed because the measured range did not cross the neutral position on both axes.',
+				}));
+			}
+
+			if (
+				travel.xLow < minimumTravel ||
+				travel.xHigh < minimumTravel ||
+				travel.yLow < minimumTravel ||
+				travel.yHigh < minimumTravel
+			) {
+				throw new Error(t('AddonsConfig:analog-calibration-insufficient-range', {
+					defaultValue: 'Stick did not travel far enough. Rotate the stick fully around the gate and try again.',
+				}));
+			}
+
+			const minX = range.minX;
+			const maxX = range.maxX;
+			const minY = range.minY;
+			const maxY = range.maxY;
 
 			setFieldValue(`joystickMinX${suffix}`, minX);
 			setFieldValue(`joystickMaxX${suffix}`, maxX);
@@ -341,7 +374,7 @@ const Analog = ({ values, errors, handleChange, handleCheckbox, setFieldValue }:
 			setFieldValue(`joystickCenterY${suffix}`, neutral.y);
 
 			console.log('Calibration completed:', {
-				values: calibrationValues,
+				range,
 				finalCalibration: {
 					minX,
 					maxX,
@@ -355,11 +388,12 @@ const Analog = ({ values, errors, handleChange, handleCheckbox, setFieldValue }:
 			const successKey = stick === 1
 				? 'AddonsConfig:analog-calibration-success-stick-1'
 				: 'AddonsConfig:analog-calibration-success-stick-2';
-			const sampleRows = CALIBRATION_POSITIONS.map((step) => {
-				const value = calibrationValues[step.position];
-				const direction = t(step.labelKey, { defaultValue: step.defaultLabel });
-				return `• ${direction}: X=${value.x}, Y=${value.y}`;
-			}).join('\n');
+			const sampleRows = [
+				`Neutral: X=${neutral.x}, Y=${neutral.y}`,
+				`X: min=${minX}, max=${maxX}`,
+				`Y: min=${minY}, max=${maxY}`,
+				`Samples: ${range.samples}`,
+			].join('\n');
 
 			alert(
 				t(successKey, {
@@ -390,6 +424,12 @@ const Analog = ({ values, errors, handleChange, handleCheckbox, setFieldValue }:
 			}));
 		}
 	};
+
+	const calibrationButtonLabel = (stick: 1 | 2, labelKey: string) => (
+		calibratingStick === stick
+			? t('AddonsConfig:analog-calibration-calibrating', { defaultValue: 'Calibrating...' })
+			: t(labelKey)
+	);
 
 	return (
 		<Section title={
@@ -652,13 +692,27 @@ const Analog = ({ values, errors, handleChange, handleCheckbox, setFieldValue }:
 									<button
 										type="button"
 										className="btn btn-sm btn-outline-secondary ms-2"
-										disabled={Boolean(values.auto_calibrate)}
+										disabled={Boolean(values.auto_calibrate) || calibratingStick !== null}
 										onClick={() => runCalibration(1)}
 									>
-										{t('AddonsConfig:analog-calibrate-stick-1-button')}
+										{calibratingStick === 1 && (
+											<Spinner
+												as="span"
+												animation="border"
+												size="sm"
+												role="status"
+												aria-hidden="true"
+												className="me-1"
+											/>
+										)}
+										{calibrationButtonLabel(1, 'AddonsConfig:analog-calibrate-stick-1-button')}
 									</button>
-									<div className="ms-3 small text-muted">
-										{`Neutral: X=${values.joystickCenterX}, Y=${values.joystickCenterY}`}
+									<div className="ms-3 small text-muted" aria-live="polite">
+										{calibratingStick === 1
+											? t('AddonsConfig:analog-calibration-calibrating-status', {
+												defaultValue: 'Calibrating min/max range...',
+											})
+											: `Neutral: X=${values.joystickCenterX}, Y=${values.joystickCenterY}`}
 									</div>
 								</div>
 								{Boolean(values.auto_calibrate) && (
@@ -915,13 +969,27 @@ const Analog = ({ values, errors, handleChange, handleCheckbox, setFieldValue }:
 									<button
 										type="button"
 										className="btn btn-sm btn-outline-secondary ms-2"
-										disabled={Boolean(values.auto_calibrate2)}
+										disabled={Boolean(values.auto_calibrate2) || calibratingStick !== null}
 										onClick={() => runCalibration(2)}
 									>
-										{t('AddonsConfig:analog-calibrate-stick-2-button')}
+										{calibratingStick === 2 && (
+											<Spinner
+												as="span"
+												animation="border"
+												size="sm"
+												role="status"
+												aria-hidden="true"
+												className="me-1"
+											/>
+										)}
+										{calibrationButtonLabel(2, 'AddonsConfig:analog-calibrate-stick-2-button')}
 									</button>
-									<div className="ms-3 small text-muted">
-										{`Neutral: X=${values.joystickCenterX2}, Y=${values.joystickCenterY2}`}
+									<div className="ms-3 small text-muted" aria-live="polite">
+										{calibratingStick === 2
+											? t('AddonsConfig:analog-calibration-calibrating-status', {
+												defaultValue: 'Calibrating min/max range...',
+											})
+											: `Neutral: X=${values.joystickCenterX2}, Y=${values.joystickCenterY2}`}
 									</div>
 								</div>
 								{Boolean(values.auto_calibrate2) && (
