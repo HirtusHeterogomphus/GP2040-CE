@@ -1,103 +1,101 @@
-<p align="center">
-  <a href="https://gp2040-ce.info">
-    <img alt="GP2040-CE" src="https://raw.githubusercontent.com/OpenStickCommunity/Site/main/docs/assets/images/gp2040-ce-logo.png" />
-  </a>
-</p>
+# GP2040-CE Switch Pro Controller Fork
 
-<p align="center">
-  Multi-Platform Gamepad Firmware for RP2040
-</p>
+これは GP2040-CE をベースにした、Switch Pro コントローラー互換（非公式）の RP2040 向けファームウェアです。
 
-<p align="center">
-  <img src="https://img.shields.io/github/license/OpenStickCommunity/GP2040-CE" />
-  <img src="https://img.shields.io/github/actions/workflow/status/OpenStickCommunity/GP2040-CE/cmake.yml" />
-  <br />
-  <img src="https://img.shields.io/badge/inputlag.science-0.86%20ms-blue" />
-  <img src="https://img.shields.io/badge/MiSTer%20latency-0.765%20ms-blue" />
-</p>
+フォーク元の GP2040-CE が持つ低遅延なゲームパッド基盤と Web Configurator を利用しつつ、アナログスティックの校正、LSM6DS3 ジャイロセンサー、Switch Pro IMU レポートまわりを重点的に変更しています。
 
-<p>
-  GP2040-CE (Community Edition) is a gamepad firmware for the Raspberry Pi Pico and other boards based on the RP2040 microcontrollers that combines multi-platform compatibility, low latency and a rich feature set to provide endless customization possibilities without sacrificing performance.
-</p>
+## 主な変更点
 
-<p>
-  GP2040-CE is compatible with PC, PS3, PS4, PS5, Nintendo Switch, Xbox One, Steam Deck, MiSTer and Android.
-</p>
+### アナログスティック校正
 
-## Links
+フォーク元の中心値ベースの補正処理から、スティックごとに `min` / `max` / `neutral` / `deadzone` を保存して扱う校正方式に変更しています。
 
-[Downloads](https://gp2040-ce.info/downloads) | [Installation](https://gp2040-ce.info/installation) | [Wiring](https://gp2040-ce.info/controller-build/wiring) | [Usage](https://gp2040-ce.info/usage) | [FAQ](https://gp2040-ce.info/faq/faq-general) | [GitHub](https://github.com/OpenStickCommunity/GP2040-CE)
+- `AnalogJoystick` を使って、ADC の実測範囲をもとに X/Y 軸を正規化します。
+- `DiagonalCompensation` により、必要に応じて対角方向の補正を行います。
+- Web Configurator では、まずニュートラル位置を取得し、その後スティックを外周に沿って回して X/Y の最小値・最大値を測定します。
+- 校正値は Web Configurator から保存し、再起動後の入力処理に反映されます。
 
-Full documentation can be found at [https://gp2040-ce.info](https://gp2040-ce.info)
+この校正フローでは、従来のように中心値だけで左右・上下を分割するのではなく、実際のスティック可動範囲を保存して使うため、個体差のあるジョイスティックを Switch Pro 用の左右スティックとして扱いやすくしています。
 
-## Features
+### Gyro アドオン
 
-- Select from 14 input modes including X-Input, Nintendo Switch, Playstation 4/5, Xbox One, D-Input, and Keyboard
-- Input latency average of 0.76ms in Xinput and 0.91ms for Playstation 5.
-- Multiple SOCD cleaning modes - Up Priority (a.k.a. Stickless), Neutral, and Second Input Priority.
-- Left and Right stick emulation via D-pad inputs as well as dedicated toggle switches.
-- Dual direction via D-pad + LS/RS.
-- Reversed input via a button.
-- [Turbo and Turbo LED](https://gp2040-ce.info/add-ons/turbo) with selectable speed
-- Per-button RGB LED support.
-- PWM Player indicator LED support (XInput only).
-- Multiple LED profiles support.
-- Support for 128x64 monochrome I2C displays - SSD1306, SH1106, and SH1107 compatible.
-- Custom startup splash screen and easy image upload via web configuration.
-- Support for passive buzzer speaker (3v or 5v).
-- [Built-in, embedded web configuration](https://gp2040-ce.info/web-configurator) - No download required!
+LSM6DS3 を使う I2C ジャイロアドオンを追加しています。
 
-Visit the [GP2040-CE Usage](https://gp2040-ce.info/usage) page for more details.
+- I2C アドレスは `0x6A`、`0x6B`、または自動検出を選択できます。
+- 加速度センサーとジャイロスコープのオフセット値を設定として保存できます。
+- Web Configurator からセンサーのバイアス値を測定し、加速度・角速度オフセットとして反映できます。
+- Switch Pro モード時に、読み取った加速度・角速度サンプルを `GamepadAuxState` 経由で Switch Pro ドライバへ渡します。
 
-## Performance
+Web Configurator の測定機能は `/api/measureGyroOffsets` を使い、設定された I2C バス上の LSM6DS3 を探してオフセット値を返します。
 
-Input latency is tested using the methodology outlined at [WydD's inputlag.science website](https://inputlag.science/controller/methodology), using the default 1000 Hz (1 ms) polling rate in the firmware. You can read more about the setup we use to conduct latency testing [HERE](https://github.com/OpenStickCommunity/Site/blob/main/latency_testing/README.md) if you are interested in testing for yourself or would just like to know more about the devices used to do the testing.
+### Switch Pro IMU レポート
 
-| Version | Mode    | Poll Rate | Min     | Max     | Avg     | Stdev   | % on time | %1f skip | %2f skip |
-| ------- | ------- | --------- | ------- | ------- | ------- | ------- | --------- | -------- | -------- |
-| v0.7.12 | Xinput  | 1 ms      | 0.45 ms | 1.28 ms | 0.76 ms | 0.24 ms | 98.48%    | 1.52%    | 0%       |
-| v0.7.12 | Switch  | 1 ms      | 0.41 ms | 1.22 ms | 0.72 ms | 0.24 ms | 98.53%    | 1.47%    | 0%       |
-| v0.7.12 | HID USB | 1 ms      | 0.42 ms | 1.25 ms | 0.73 ms | 0.24 ms | 98.52%    | 1.48%    | 0%       |
-| v0.7.12 | PS3     | 1 ms      | 0.52 ms | 1.46 ms | 0.83 ms | 0.24 ms | 98.37%    | 1.63%    | 0%       |
-| v0.7.12 | PS4     | 1 ms      | 0.55 ms | 2.33 ms | 0.90 ms | 0.32 ms | 98.19%    | 1.81%    | 0%       |
-| v0.7.12 | PS5     | 1 ms      | 0.55 ms | 2.38 ms | 0.91 ms | 0.32 ms | 98.18%    | 1.82%    | 0%       |
+`SwitchProDriver` を変更し、ホストから送られる `TOGGLE_IMU` の値に応じて IMU レポート形式を切り替えられるようにしています。
 
-Full results can be found in the [GP2040-CE v0.7.12 Firmware Latency Test Results](https://github.com/OpenStickCommunity/Site/raw/main/latency_testing/GP2040-CE_Firmware_Latency_Test_Results_v0.7.12.xlsx) .xlsx Sheet.
+- `TOGGLE_IMU=0x01`: 従来の raw IMU payload を送信します。
+- `TOGGLE_IMU=0x02~0x05`: quaternion payload を生成して送信します。
+- quaternion mode ではジャイロの積分から quaternion を更新し、Switch Pro 互換の compressed quaternion 形式に変換します。
+- IMU モード変更時や IMU 無効化時は quaternion と timestamp の内部状態をリセットします。
 
-Results from v0.7.11 can be found [HERE](https://github.com/OpenStickCommunity/Site/raw/main/latency_testing/GP2040-CE_Firmware_Latency_Test_Results_v0.7.11.xlsx). Previous results can be found in the `latency_testing` folder.
+これにより、raw 加速度・角速度を要求する環境と、quaternion を要求する環境の両方に対応することを狙っています。
 
-## Support
+### StagSwitchPro ボード設定
 
-If you would like to discuss features, issues or anything else related to GP2040-CE please [create an issue](https://github.com/OpenStickCommunity/GP2040-CE/issues/new) or join the [OpenStick GP2040-CE Discord](https://discord.gg/k2pxhke7q8) support channel.
+`configs/StagSwitchPro` を追加し、Switch Pro 互換ファームウェア向けのデフォルト設定を用意しています。
 
-## Contributing
+- デフォルト入力モードは `INPUT_MODE_SWITCH_PRO` です。
+- 2 本のアナログスティックを ADC ピンに割り当てています。
+- I2C0 と LSM6DS3 gyro アドオンを標準で有効にしています。
+- アナログスティックの初期 min/max/neutral/deadzone、反転設定、円形補正を定義しています。
 
-Want to help improve GP2040-CE? There are a bunch of ways to contribute!
+## 使い方
 
-### Community Participation
+ビルド時は board config として `StagSwitchPro` を指定してください。GP2040-CE のビルド環境、書き込み方法、Web Configurator の基本操作はフォーク元のドキュメントを参照してください。
 
-Have an idea for a cool new feature, or just want to discuss some technical details with the developers? Join the [OpenStick GP2040-CE Discord](https://discord.gg/k2pxhke7q8) server to participate in our active and ever-growing community!
+- Documentation: https://gp2040-ce.info
+- Upstream repository: https://github.com/OpenStickCommunity/GP2040-CE
 
-### Pull Requests
+書き込み後は Web Configurator で以下を確認・調整します。
 
-Pull requests are welcome and encouraged for enhancements, bug fixes and documentation updates.
+1. Analog アドオンで各スティックのピン、反転、校正値を確認します。
+2. 手動校正を使う場合は、ニュートラル取得後にスティックを外周に沿って回して min/max を測定します。
+3. Gyro アドオンで I2C アドレスを選択し、必要に応じてオフセット測定を実行します。
+4. 設定を保存し、デバイスを再起動して反映します。
 
-Please respect the coding style of the file(s) you are working in, and enforce the use of the `.editorconfig` file when present.
+## 関連する設定と API
+
+README では概要のみを扱いますが、このフォークで追加・利用している主なインターフェースは次の通りです。
+
+- Web Configurator API:
+  - `/api/getJoystickCenter`
+  - `/api/getJoystickCenter2`
+  - `/api/measureGyroOffsets`
+- Analog config:
+  - joystick min/max/neutral/deadzone
+  - diagonal compensation
+  - forced circularity
+- Gyro config:
+  - gyro address
+  - accelerometer offsets
+  - gyroscope offsets
+- Switch command behavior:
+  - `TOGGLE_IMU=0x01` raw IMU
+  - `TOGGLE_IMU=0x02~0x05` quaternion
+
+## Upstream との差分について
+
+フォーク元の GP2040-CE は、RP2040 向けの汎用マルチプラットフォームゲームパッドファームウェアです。このフォークでは、その基盤の上に Switch Pro コントローラ互換用途の変更を加えています。
+
+実装比較では、ローカル履歴の共通祖先 `e9341063` および upstream main の該当実装を参照しています。upstream 側の analog 実装は中心値をもとに ADC 値を正規化する構成で、Switch Pro ドライバの `TOGGLE_IMU` は IMU の有効・無効を扱うだけでした。このフォークでは、アナログスティックの実測範囲保存、LSM6DS3 gyro アドオン、`TOGGLE_IMU` による raw IMU / quaternion mode 切り替えを追加しています。
+
+## License
+
+このフォーク全体は `GPL-2.0-only` として配布します。GPLv2本文は [LICENSE](LICENSE) を参照してください。
+
+元の GP2040-CE 由来コードや同梱ライブラリには MIT / BSD / Apache などの個別ライセンス表示が残っています。これらの表示は元著作権・元ライセンスの通知として保持し、本フォークの配布物には `GPL-2.0-only` の条件を適用します。主な通知は [NOTICE](NOTICE) にまとめています。
 
 ## Acknowledgements
 
-- [FeralAI](https://github.com/FeralAI) for building [GP2040](https://github.com/FeralAI/GP2040) and laying the foundation for this community project
-- Ha Thach's excellent [TinyUSB library](https://github.com/hathach/tinyusb) examples
-- fluffymadness's [tinyusb-xinput](https://github.com/fluffymadness/tinyusb-xinput) sample
-- Kevin Boone's [blog post on using RP2040 flash memory as emulated EEPROM](https://kevinboone.me/picoflash.html)
-- [bitbank2](https://github.com/bitbank2) for the [OneBitDisplay](https://github.com/bitbank2/OneBitDisplay) and [BitBang_I2C](https://github.com/bitbank2/BitBang_I2C) libraries, which were ported for use with the Pico SDK
-- [arntsonl](https://github.com/arntsonl) for the amazing cleanup and feature additions that brought us to v0.5.0
-- [alirin222](https://github.com/alirin222) for the awesome turbo code ([@alirin222](https://twitter.com/alirin222) on Twitter)
-- [deeebug](https://github.com/deeebug) for improvements to the web-UI and fixing the PS3 home button issue
-- [TheTrain](https://github.com/TheTrainGoes/GP2040-Projects) and [Fortinbra](https://github.com/Fortinbra) for helping keep our community chugging along
-- [PassingLink](https://github.com/passinglink/passinglink) for the technical details and code for PS4 implementation
-- [Youssef Habchi](https://youssef-habchi.com/) for allowing us to purchase a license to use Road Rage font for the project
-- [tamanegitaro](https://github.com/tamanegitaro/) and [alirin222](https://github.com/alirin222) for the basis of the mini/classic controller work
-- [Ryzee119](https://github.com/Ryzee119) for the wonderful [ogx360_t4](https://github.com/Ryzee119/ogx360_t4/) and xid_driver library for Original Xbox support
-- [Santroller](https://github.com/Santroller/Santroller) and [GIMX](https://github.com/matlo/GIMX) for technical examples of Xbox One authentication using pass-through
-- [Santroller](https://github.com/Santroller/Santroller) for the code necessary to have Xbox 360 run without a dongle
+このプロジェクトは [OpenStickCommunity/GP2040-CE](https://github.com/OpenStickCommunity/GP2040-CE) をベースにしています。GP2040-CE の開発者、コントリビューター、関連ライブラリの作者に感謝します。
+
+Switch Pro `TOGGLE_IMU=0x02~0x05` の quaternion packing は [ndeadly/MissionControl](https://github.com/ndeadly/MissionControl) の `mc_mitm/source/controllers/switch_motion_packing.hpp` および `mc_mitm/source/controllers/switch_motion_packing.cpp` に由来する GPLv2 実装として整理しています。詳細は [docs/switch2-imu-provenance.md](docs/switch2-imu-provenance.md) を参照してください。
