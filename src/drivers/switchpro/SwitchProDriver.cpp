@@ -3,8 +3,107 @@
 #include "storagemanager.h"
 #include "pico/rand.h"
 
+#include <algorithm>
+#include <cmath>
+#include <cstdint>
+#include <cstring>
+
 // force a report to be sent every X ms
 #define SWITCH_PRO_KEEPALIVE_TIMER 5
+
+namespace {
+
+// Switch2 が TOGGLE_IMU=0x02 で要求する quaternion mode 用の換算定数。
+// LSM6DS3 は 2000 dps full scale で初期化しているため、int16 raw 値を rad/s に変換する。
+constexpr float SWITCH_PRO_IMU_PI = 3.14159265358979323846f;
+constexpr float SWITCH_PRO_IMU_GYRO_RAD_PER_SEC = 2000.0f / INT16_MAX * SWITCH_PRO_IMU_PI / 180.0f;
+// USB report 停止や処理遅延で dt が大きく跳ねた時に、1回の積分で姿勢が飛ぶのを防ぐ。
+constexpr float SWITCH_PRO_IMU_MAX_DELTA_SECONDS = 0.05f;
+// Mahony の比例ゲイン。0.0f の場合は加速度による roll/pitch 補正を無効化し、gyro 積分のみになる。
+constexpr float SWITCH_PRO_IMU_MAHONY_KP = 0.0f;
+// LSM6DS3 の +-8g 設定では 1g が約 4096 raw。加速度補正は重力に近い大きさの時だけ使う。
+constexpr float SWITCH_PRO_IMU_ACCEL_ONE_G = 4096.0f;
+constexpr float SWITCH_PRO_IMU_ACCEL_MIN = SWITCH_PRO_IMU_ACCEL_ONE_G * 0.55f;
+constexpr float SWITCH_PRO_IMU_ACCEL_MAX = SWITCH_PRO_IMU_ACCEL_ONE_G * 1.45f;
+
+// mode2 packet 内の accel ベクトルは wire layout が y,x,z 順。
+// C++ 側のフィールド名もこの順にしておき、memcpy 時のバイト配置を明示する。
+typedef struct __attribute((packed, aligned(1)))
+{
+    int16_t y;
+    int16_t x;
+    int16_t z;
+} SwitchIMUMode2Vector;
+
+// Switch2 mode2 の 36 byte IMU payload。
+// quaternion は最大成分を省いた 3 成分として bitfield に格納し、accel は先頭の accel0 を使う。
+typedef struct __attribute((packed, aligned(1)))
+{
+    SwitchIMUMode2Vector accel0;
+    uint32_t mode : 2;
+    uint32_t maxIndex : 2;
+    uint32_t lastSample0 : 21;
+    uint32_t lastSample1Low : 7;
+    uint16_t lastSample1High : 14;
+    uint16_t lastSample2Low : 2;
+    SwitchIMUMode2Vector accel1;
+    uint32_t lastSample2High : 19;
+    uint32_t deltaLastFirst0 : 13;
+    uint16_t deltaLastFirst1 : 13;
+    uint16_t deltaLastFirst2Low : 3;
+    SwitchIMUMode2Vector accel2;
+    uint32_t deltaLastFirst2High : 10;
+    uint32_t deltaMidAvg0 : 7;
+    uint32_t deltaMidAvg1 : 7;
+    uint32_t deltaMidAvg2 : 7;
+    uint32_t timestampStartLow : 1;
+    uint16_t timestampStartHigh : 10;
+    uint16_t timestampCount : 6;
+} SwitchIMUMode2Data;
+
+static_assert(sizeof(SwitchIMUMode2Data) == 36, "Switch IMU mode 2 payload must be 36 bytes");
+
+// auxState 上は uint16_t で保持されている IMU raw 値を、センサー本来の signed int16 に戻す。
+int16_t signedIMUValue(uint16_t value) {
+    return static_cast<int16_t>(value);
+}
+
+// int16 の符号反転 helper。INT16_MIN は正方向に表現できないため、飽和させる。
+int16_t invertIMUValue(int16_t value) {
+    return value == INT16_MIN ? INT16_MAX : static_cast<int16_t>(-value);
+}
+
+// 正規化済み quaternion を Switch mode2 の "smallest three" 形式に圧縮する。
+// 4成分のうち絶対値が最大の成分を maxIndex として省略し、残り3成分だけを packet に詰める。
+void packMode2Quaternion(SwitchIMUMode2Data& mode2Data, const float quat[4]) {
+    // 符号付き値そのものではなく絶対値で最大成分を選ぶ。
+    // ここを誤ると、負方向に大きく回した時だけ maxIndex が切り替わらず姿勢がジャンプする。
+    uint8_t maxIndex = 0;
+    for (uint8_t i = 1; i < 4; i++) {
+        if (std::fabs(quat[i]) > std::fabs(quat[maxIndex])) {
+            maxIndex = i;
+        }
+    }
+
+    // 省略した最大成分が正になるように、残りの成分全体へ同じ符号を掛ける。
+    // quaternion は q と -q が同じ姿勢を表すため、この正規化で送信表現を一意に近づける。
+    int32_t quaternionComponents[3] = {};
+    const float sign = quat[maxIndex] < 0.0f ? -1.0f : 1.0f;
+    for (uint8_t i = 0; i < 3; i++) {
+        quaternionComponents[i] = static_cast<int32_t>(quat[(maxIndex + i + 1) & 3] * 0x40000000 * sign);
+    }
+
+    // Pro Controller 互換の bitfield 配置に分割して保存する。
+    // 各成分は上位側 21 bit 相当を使うため、10 bit 右シフトしてから field に分ける。
+    mode2Data.maxIndex = maxIndex;
+    mode2Data.lastSample0 = static_cast<uint32_t>(quaternionComponents[0] >> 10);
+    mode2Data.lastSample1Low = static_cast<uint32_t>((quaternionComponents[1] >> 10) & 0x7F);
+    mode2Data.lastSample1High = static_cast<uint16_t>(((quaternionComponents[1] >> 10) & 0x1FFF80) >> 7);
+    mode2Data.lastSample2Low = static_cast<uint16_t>((quaternionComponents[2] >> 10) & 0x03);
+    mode2Data.lastSample2High = static_cast<uint32_t>(((quaternionComponents[2] >> 10) & 0x1FFFFC) >> 2);
+}
+
+}
 
 void SwitchProDriver::initialize() {
     //stdio_init_all();
@@ -13,6 +112,8 @@ void SwitchProDriver::initialize() {
     last_report_counter = 0;
     handshakeCounter = 0;
     isReady = false;
+    imuMode = 0;
+    resetIMUState();
 
     deviceInfo = {
         .majorVersion = 0x04,
@@ -138,6 +239,7 @@ bool SwitchProDriver::process(Gamepad * gamepad) {
     switchReport.inputs.rightStick.setY(-std::min(std::max(scaleRightStickY,rightMinY), rightMaxY));
 
     switchReport.rumbleReport = 0x09;
+    updateIMUData(gamepad);
     //switchReport.reportID = inputMode;
 
 	// Wake up TinyUSB device
@@ -433,12 +535,15 @@ void SwitchProDriver::handleFeatureReport(uint8_t switchReportID, uint8_t switch
             break;
         case SwitchCommands::TOGGLE_IMU:
             //printf("SwitchProDriver::set_report: Rpt 0x01 TOGGLE_IMU\n");
-            isIMUEnabled = reportData[11];
+            if (imuMode != reportData[11]) {
+                resetIMUState();
+            }
+            imuMode = reportData[11];
             report[13] = 0x80;
             report[14] = commandID;
             report[15] = 0x00;
             canSend = true;
-            //printf("IMU set to %d\n", isIMUEnabled);
+            //printf("IMU mode set to %d\n", imuMode);
             //printf("----------------------------------------------\n");
             break;
         case SwitchCommands::IMU_SENSITIVITY:
@@ -524,6 +629,279 @@ void SwitchProDriver::readSPIFlash(uint8_t* dest, uint32_t address, uint8_t size
         //printf("Not Found\n");
         memset(dest, 0xFF, size);
     }
+}
+
+// mode2 の姿勢推定状態と timestamp を初期状態へ戻す。
+void SwitchProDriver::resetIMUState() {
+    // mode2 開始時や IMU 無効化後は identity quaternion から再開する。
+    // 古い姿勢を残すと、次回接続時や mode 切替時に Switch 側へ前回の傾きが送られてしまう。
+    imuQuaternionX = 0.0f;
+    imuQuaternionY = 0.0f;
+    imuQuaternionZ = 0.0f;
+    imuQuaternionW = 1.0f;
+    imuQuaternionLastTimeUs = 0;
+    imuMode2TimestampRemainderUs = 0;
+    imuMode2Timestamp = 0;
+}
+
+// TOGGLE_IMU で要求された mode に応じて raw IMU と quaternion mode2 を振り分ける。
+void SwitchProDriver::updateIMUData(Gamepad *gamepad) {
+    if (
+        imuMode == 0 ||
+        !gamepad->auxState.sensors.accelerometer.enabled ||
+        !gamepad->auxState.sensors.accelerometer.active ||
+        !gamepad->auxState.sensors.gyroscope.enabled ||
+        !gamepad->auxState.sensors.gyroscope.active
+    ) {
+        memset(switchReport.imuData, 0x00, sizeof(switchReport.imuData));
+        imuQuaternionLastTimeUs = 0;
+        return;
+    }
+
+    switch (imuMode) {
+        case 0x01:
+            updateRawIMUData(gamepad);
+            break;
+        case 0x02:
+            updateMode2IMUData(gamepad);
+            break;
+        default:
+            memset(switchReport.imuData, 0x00, sizeof(switchReport.imuData));
+            imuQuaternionLastTimeUs = 0;
+            break;
+    }
+}
+
+// 従来の Switch raw IMU mode。3 sample 分の raw accel/gyro を 36 byte に詰める。
+void SwitchProDriver::updateRawIMUData(Gamepad *gamepad) {
+    const GamepadAuxSensors& sensors = gamepad->auxState.sensors;
+    const uint8_t sampleCount = sensors.imuSampleCount > GAMEPAD_AUX_MAX_IMU_SAMPLES ?
+        GAMEPAD_AUX_MAX_IMU_SAMPLES : sensors.imuSampleCount;
+    if (sampleCount == 0) {
+        for (uint8_t sample = 0; sample < GAMEPAD_AUX_MAX_IMU_SAMPLES; sample++) {
+            writeCurrentIMUSample(&switchReport.imuData[sample * 12], gamepad);
+        }
+        return;
+    }
+
+    const uint8_t firstSample = GAMEPAD_AUX_MAX_IMU_SAMPLES - sampleCount;
+    for (uint8_t sample = 0; sample < GAMEPAD_AUX_MAX_IMU_SAMPLES; sample++) {
+        const uint8_t sampleIndex = sample < sampleCount ?
+            GAMEPAD_AUX_MAX_IMU_SAMPLES - 1 - sample :
+            firstSample;
+        writeIMUSample(&switchReport.imuData[sample * 12], sensors.imuSamples[sampleIndex]);
+    }
+}
+
+// Switch2 が要求する quaternion mode2 payload を生成する。
+void SwitchProDriver::updateMode2IMUData(Gamepad *gamepad) {
+    // addon 側 FIFO の最新サンプルを取り出し、mode2 用の内部座標 frame に変換する。
+    // raw mode とは別処理にして、Switch2 quaternion mode 用の補正が raw 36 bytes に影響しないようにする。
+    GamepadAuxIMUSample sample = getLatestIMUSample(gamepad);
+    Mode2IMUFrame frame = toMode2Frame(sample);
+
+    // 前回 report からの経過時間を使って gyro 角速度を積分する。
+    // 初回は deltaUs=0 とし、timestamp だけ初期化して姿勢は identity のまま送る。
+    uint64_t nowUs = to_us_since_boot(get_absolute_time());
+    uint64_t deltaUs = imuQuaternionLastTimeUs == 0 ? 0 : nowUs - imuQuaternionLastTimeUs;
+    imuQuaternionLastTimeUs = nowUs;
+
+    updateMode2Attitude(frame, deltaUs);
+
+    // mode2 packet 内の timestamp は ms 単位の 11 bit 値として扱う。
+    // report 間隔は us で測るため、1000 us 未満の端数を次回へ繰り越す。
+    imuMode2TimestampRemainderUs += deltaUs;
+    if (imuMode2TimestampRemainderUs >= 1000) {
+        uint64_t wholeMs = imuMode2TimestampRemainderUs / 1000;
+        imuMode2TimestampRemainderUs %= 1000;
+        imuMode2Timestamp = static_cast<uint16_t>((imuMode2Timestamp + wholeMs) % 0x7FF);
+    }
+
+    SwitchIMUMode2Data mode2Data = {};
+    float quat[4] = {
+        imuQuaternionX,
+        imuQuaternionY,
+        imuQuaternionZ,
+        imuQuaternionW,
+    };
+
+    // mode2 の accel0 は wire layout が { y, x, z }。
+    // 実機確認の結果、Switch 側の accel.x 解釈は姿勢推定 frame の X と符号が逆だったため、
+    // packet へ送る x 成分だけを反転する。Mahony 推定に使う frame.accelX 自体は変更しない。
+    mode2Data.accel0 = {
+        frame.accelY,
+        static_cast<int16_t>(-frame.accelX),
+        frame.accelZ,
+    };
+
+    // quaternion と accel を 36 byte の mode2 payload に詰め、SwitchProReport::imuData へコピーする。
+    mode2Data.mode = 2;
+    packMode2Quaternion(mode2Data, quat);
+    mode2Data.timestampStartLow = imuMode2Timestamp & 0x01;
+    mode2Data.timestampStartHigh = (imuMode2Timestamp >> 1) & 0x03FF;
+    mode2Data.timestampCount = 3;
+
+    memcpy(switchReport.imuData, &mode2Data, sizeof(mode2Data));
+}
+
+// BoardConfig 適用後の IMU sample を、mode2 の姿勢推定で使う signed frame に変換する。
+SwitchProDriver::Mode2IMUFrame SwitchProDriver::toMode2Frame(const GamepadAuxIMUSample& sample) const {
+    // GamepadAuxIMUSample は BoardConfig と WebConfig の軸設定を反映済みの値。
+    // ここでは mode2 姿勢推定で使う signed int16 値に戻し、raw 経路とは独立した frame として扱う。
+    const int16_t accelX = signedIMUValue(sample.accelerometer.x);
+    const int16_t accelY = signedIMUValue(sample.accelerometer.y);
+    const int16_t accelZ = signedIMUValue(sample.accelerometer.z);
+    const int16_t gyroX = signedIMUValue(sample.gyroscope.x);
+    const int16_t gyroY = signedIMUValue(sample.gyroscope.y);
+    const int16_t gyroZ = signedIMUValue(sample.gyroscope.z);
+
+    Mode2IMUFrame frame;
+    // 現在の BoardConfig が Switch mode2 用の軸割り当てを担う。
+    // そのため、ここでは X/Y/Z を入れ替えず、Mahony 推定用の内部 frame へそのまま渡す。
+    frame.accelX = accelX;
+    frame.accelY = accelY;
+    frame.accelZ = accelZ;
+
+    frame.gyroX = gyroX;
+    frame.gyroY = gyroY;
+    frame.gyroZ = gyroZ;
+    return frame;
+}
+
+// 加速度を姿勢補正に使ってよい状態かを判定する。
+bool SwitchProDriver::isAccelUsable(const Mode2IMUFrame& frame) const {
+    // 加速度補正は、加速度ベクトルの大きさが重力 1g 付近の時だけ使う。
+    // 激しい操作中や offset 設定で重力成分が消えている時は、誤った補正を避けるため gyro 積分だけにする。
+    const float accelX = static_cast<float>(frame.accelX);
+    const float accelY = static_cast<float>(frame.accelY);
+    const float accelZ = static_cast<float>(frame.accelZ);
+    const float magnitudeSquared = (accelX * accelX) + (accelY * accelY) + (accelZ * accelZ);
+    return magnitudeSquared >= (SWITCH_PRO_IMU_ACCEL_MIN * SWITCH_PRO_IMU_ACCEL_MIN) &&
+        magnitudeSquared <= (SWITCH_PRO_IMU_ACCEL_MAX * SWITCH_PRO_IMU_ACCEL_MAX);
+}
+
+// gyro 積分と最小構成の Mahony 補正で内部 quaternion を更新する。
+void SwitchProDriver::updateMode2Attitude(const Mode2IMUFrame& frame, uint64_t deltaUs) {
+    if (deltaUs == 0) {
+        return;
+    }
+
+    // 経過時間は秒に変換して quaternion 積分に使う。
+    // 上限を設け、report 欠落などで dt が大きくなった時の姿勢飛びを抑える。
+    const float deltaTime = std::min(static_cast<float>(deltaUs) / 1000000.0f, SWITCH_PRO_IMU_MAX_DELTA_SECONDS);
+
+    // LSM6DS3 の 2000 dps raw 値を rad/s に変換する。
+    // ここで得た角速度が quaternion 微分の入力になる。
+    float gyroX = static_cast<float>(frame.gyroX) * SWITCH_PRO_IMU_GYRO_RAD_PER_SEC;
+    float gyroY = static_cast<float>(frame.gyroY) * SWITCH_PRO_IMU_GYRO_RAD_PER_SEC;
+    float gyroZ = static_cast<float>(frame.gyroZ) * SWITCH_PRO_IMU_GYRO_RAD_PER_SEC;
+
+    if (isAccelUsable(frame)) {
+        // 加速度ベクトルを正規化し、現在姿勢から推定される重力方向と比較する。
+        // ずれを角速度へ足すことで、gyro 積分だけでは戻りにくい roll/pitch を重力方向へ寄せる。
+        float accelX = static_cast<float>(frame.accelX);
+        float accelY = static_cast<float>(frame.accelY);
+        float accelZ = static_cast<float>(frame.accelZ);
+        const float accelNorm = std::sqrt((accelX * accelX) + (accelY * accelY) + (accelZ * accelZ));
+        if (accelNorm > 0.0f) {
+            const float accelNormInverse = 1.0f / accelNorm;
+            accelX *= accelNormInverse;
+            accelY *= accelNormInverse;
+            accelZ *= accelNormInverse;
+
+            const float estimatedGravityX = 2.0f * ((imuQuaternionX * imuQuaternionZ) - (imuQuaternionW * imuQuaternionY));
+            const float estimatedGravityY = 2.0f * ((imuQuaternionW * imuQuaternionX) + (imuQuaternionY * imuQuaternionZ));
+            const float estimatedGravityZ =
+                (imuQuaternionW * imuQuaternionW) - (imuQuaternionX * imuQuaternionX) -
+                (imuQuaternionY * imuQuaternionY) + (imuQuaternionZ * imuQuaternionZ);
+
+            // accel と推定重力の外積が、姿勢を補正する回転方向になる。
+            // SWITCH_PRO_IMU_MAHONY_KP が 0.0f の時はこの補正は無効で、軸検証しやすい gyro-only 動作になる。
+            const float errorX = (accelY * estimatedGravityZ) - (accelZ * estimatedGravityY);
+            const float errorY = (accelZ * estimatedGravityX) - (accelX * estimatedGravityZ);
+            const float errorZ = (accelX * estimatedGravityY) - (accelY * estimatedGravityX);
+
+            gyroX += SWITCH_PRO_IMU_MAHONY_KP * errorX;
+            gyroY += SWITCH_PRO_IMU_MAHONY_KP * errorY;
+            gyroZ += SWITCH_PRO_IMU_MAHONY_KP * errorZ;
+        }
+    }
+
+    // quaternion 微分 q_dot = 0.5 * q * omega を Euler 積分する。
+    // omega は上で補正済みの gyro 角速度で、q は内部状態の現在姿勢。
+    float nextW = imuQuaternionW + ((-imuQuaternionX * gyroX - imuQuaternionY * gyroY - imuQuaternionZ * gyroZ) * 0.5f * deltaTime);
+    float nextX = imuQuaternionX + ((imuQuaternionW * gyroX + imuQuaternionY * gyroZ - imuQuaternionZ * gyroY) * 0.5f * deltaTime);
+    float nextY = imuQuaternionY + ((imuQuaternionW * gyroY - imuQuaternionX * gyroZ + imuQuaternionZ * gyroX) * 0.5f * deltaTime);
+    float nextZ = imuQuaternionZ + ((imuQuaternionW * gyroZ + imuQuaternionX * gyroY - imuQuaternionY * gyroX) * 0.5f * deltaTime);
+
+    // 積分誤差で quaternion の長さが 1 から外れるため、毎回正規化する。
+    // 非有限値が混じった場合は安全側に倒して identity へ戻す。
+    const float norm = std::sqrt((nextX * nextX) + (nextY * nextY) + (nextZ * nextZ) + (nextW * nextW));
+    if (!(norm > 0.0f) || !std::isfinite(norm)) {
+        resetIMUState();
+        return;
+    }
+
+    const float normInverse = 1.0f / norm;
+    nextX *= normInverse;
+    nextY *= normInverse;
+    nextZ *= normInverse;
+    nextW *= normInverse;
+
+    // q と -q は同じ姿勢を表すが、符号が急に反転すると mode2 圧縮後の値が跳ねる。
+    // 前回 quaternion と同じ半球にそろえて、送信値の連続性を保つ。
+    const float hemisphereDot =
+        (nextX * imuQuaternionX) + (nextY * imuQuaternionY) +
+        (nextZ * imuQuaternionZ) + (nextW * imuQuaternionW);
+    if (hemisphereDot < 0.0f) {
+        nextX = -nextX;
+        nextY = -nextY;
+        nextZ = -nextZ;
+        nextW = -nextW;
+    }
+
+    imuQuaternionX = nextX;
+    imuQuaternionY = nextY;
+    imuQuaternionZ = nextZ;
+    imuQuaternionW = nextW;
+}
+
+// FIFO があれば最新 sample、なければ現在の auxState を使う。
+GamepadAuxIMUSample SwitchProDriver::getLatestIMUSample(Gamepad *gamepad) {
+    const GamepadAuxSensors& sensors = gamepad->auxState.sensors;
+    const uint8_t sampleCount = sensors.imuSampleCount > GAMEPAD_AUX_MAX_IMU_SAMPLES ?
+        GAMEPAD_AUX_MAX_IMU_SAMPLES : sensors.imuSampleCount;
+    if (sampleCount > 0) {
+        return sensors.imuSamples[GAMEPAD_AUX_MAX_IMU_SAMPLES - 1];
+    }
+
+    GamepadAuxIMUSample sample;
+    sample.accelerometer = sensors.accelerometer;
+    sample.gyroscope = sensors.gyroscope;
+    return sample;
+}
+
+void SwitchProDriver::writeIMUSample(uint8_t *dest, const GamepadAuxIMUSample& sample) {
+    uint16_t values[6] = {
+        sample.accelerometer.x,
+        sample.accelerometer.y,
+        sample.accelerometer.z,
+        sample.gyroscope.x,
+        sample.gyroscope.y,
+        sample.gyroscope.z,
+    };
+
+    for (uint8_t i = 0; i < 6; i++) {
+        dest[i * 2] = values[i] & 0xFF;
+        dest[(i * 2) + 1] = (values[i] >> 8) & 0xFF;
+    }
+}
+
+void SwitchProDriver::writeCurrentIMUSample(uint8_t *dest, Gamepad *gamepad) {
+    GamepadAuxIMUSample sample;
+    sample.accelerometer = gamepad->auxState.sensors.accelerometer;
+    sample.gyroscope = gamepad->auxState.sensors.gyroscope;
+    writeIMUSample(dest, sample);
 }
 
 // Only XboxOG and Xbox One use vendor control xfer cb

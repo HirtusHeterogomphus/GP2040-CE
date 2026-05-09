@@ -920,6 +920,19 @@ message HETriggerOptions
     optional int32 smoothingFactor = 13;
 }
 
+message GyroOptions
+{
+    optional bool enabled = 1;
+    // 0 means auto-detect. Supported fixed addresses are 0x6A and 0x6B.
+    optional uint32 address = 2;
+    optional int32 accelOffsetX = 3;
+    optional int32 accelOffsetY = 4;
+    optional int32 accelOffsetZ = 5;
+    optional int32 gyroOffsetX = 6;
+    optional int32 gyroOffsetY = 7;
+    optional int32 gyroOffsetZ = 8;
+}
+
 message AddonOptions
 {
     optional BootselButtonOptions bootselButtonOptions = 1;
@@ -952,6 +965,7 @@ message AddonOptions
     optional GamepadUSBHostOptions gamepadUSBHostOptions = 28;
     optional TG16Options tg16Options = 29;
     optional HETriggerOptions heTriggerOptions = 30;
+    optional GyroOptions gyroOptions = 31;
 }
 
 message MigrationHistory

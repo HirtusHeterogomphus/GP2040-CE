@@ -180,6 +180,7 @@ add_link_options(-Wl,--gc-sections)
 
 add_subdirectory(lib)
 add_subdirectory(submodules/Pico_AnalogJoystick)
+add_subdirectory(submodules/Pico_LSM6DS3)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   # Activate some compiler / linker options to aid us with diagnosing stack space issues in Debug builds
@@ -297,6 +298,7 @@ src/addons/spi_analog_ads1256.cpp
 src/addons/gamepad_usb_host.cpp
 src/addons/gamepad_usb_host_listener.cpp
 src/addons/tg16_input.cpp
+src/addons/gyro.cpp
 src/animationstation/animation.cpp
 src/animationstation/animationstation.cpp
 src/animationstation/effects/chase.cpp
@@ -335,6 +337,7 @@ SNESpad
 pico_mbedtls
 nanopb
 AnalogJoystick::AnalogJoystick
+pico_lsm6ds3::pico_lsm6ds3
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC

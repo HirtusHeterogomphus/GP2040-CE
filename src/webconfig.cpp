@@ -35,6 +35,7 @@
 #include "lwip/def.h"
 #include "lwip/mem.h"
 #include "addons/input_macro.h"
+#include "pico_lsm6ds3/LSM6DS3.h"
 
 #define PATH_CGI_ACTION "/cgi/action"
 
@@ -1689,6 +1690,119 @@ std::string setHETriggerCalibrations()
     return serialize_json(doc);
 }
 
+namespace {
+constexpr uint8_t GYRO_ADDRESS_AUTO = 0x00;
+constexpr uint8_t GYRO_ADDRESS_PRIMARY = 0x6A;
+constexpr uint8_t GYRO_ADDRESS_SECONDARY = 0x6B;
+constexpr uint8_t LSM6DS3_WHO_AM_I = 0x0F;
+constexpr uint8_t LSM6DS3_WHO_AM_I_PRIMARY = 0x6C;
+constexpr uint8_t LSM6DS3_WHO_AM_I_ALTERNATE = 0x69;
+constexpr size_t GYRO_OFFSET_SAMPLE_COUNT = 32;
+constexpr uint32_t GYRO_OFFSET_SAMPLE_DELAY_MS = 10;
+
+struct GyroOffsetMeasurement {
+    uint8_t block = 0;
+    uint8_t address = 0;
+    int32_t accelOffsetX = 0;
+    int32_t accelOffsetY = 0;
+    int32_t accelOffsetZ = 0;
+    int32_t gyroOffsetX = 0;
+    int32_t gyroOffsetY = 0;
+    int32_t gyroOffsetZ = 0;
+};
+
+static int32_t roundGyroOffset(float value)
+{
+    return static_cast<int32_t>(value >= 0.0f ? value + 0.5f : value - 0.5f);
+}
+
+static bool measureGyroOffsetsOnI2C(PeripheralI2C *candidateI2C, uint8_t block, uint8_t address, GyroOffsetMeasurement& measurement)
+{
+    if (candidateI2C == nullptr || candidateI2C->getSDA() < 0 || candidateI2C->getSCL() < 0) {
+        return false;
+    }
+
+    uint8_t whoAmI = 0;
+    if (!candidateI2C->readRegister(address, LSM6DS3_WHO_AM_I, &whoAmI, sizeof(whoAmI)) ||
+        (whoAmI != LSM6DS3_WHO_AM_I_PRIMARY && whoAmI != LSM6DS3_WHO_AM_I_ALTERNATE)) {
+        return false;
+    }
+
+    pico_lsm6ds3::LSM6DS3 sensor(candidateI2C->getController(), address);
+    if (!sensor.begin(static_cast<uint>(candidateI2C->getSDA()), static_cast<uint>(candidateI2C->getSCL()), candidateI2C->getSpeed())) {
+        return false;
+    }
+
+    sensor.calibrateOffsets(GYRO_OFFSET_SAMPLE_COUNT, GYRO_OFFSET_SAMPLE_DELAY_MS);
+
+    float accelX = 0.0f;
+    float accelY = 0.0f;
+    float accelZ = 0.0f;
+    float gyroX = 0.0f;
+    float gyroY = 0.0f;
+    float gyroZ = 0.0f;
+    sensor.getOffsets(accelX, accelY, accelZ, gyroX, gyroY, gyroZ);
+
+    measurement.block = block;
+    measurement.address = address;
+    measurement.accelOffsetX = roundGyroOffset(accelX);
+    measurement.accelOffsetY = roundGyroOffset(accelY);
+    measurement.accelOffsetZ = roundGyroOffset(accelZ);
+    measurement.gyroOffsetX = roundGyroOffset(gyroX);
+    measurement.gyroOffsetY = roundGyroOffset(gyroY);
+    measurement.gyroOffsetZ = roundGyroOffset(gyroZ);
+    return true;
+}
+}
+
+std::string measureGyroOffsets()
+{
+    DynamicJsonDocument postDoc = get_post_data();
+    const size_t capacity = JSON_OBJECT_SIZE(16);
+    DynamicJsonDocument doc(capacity);
+
+    uint32_t requestedAddress = Storage::getInstance().getAddonOptions().gyroOptions.address;
+    docToValue(requestedAddress, postDoc, "gyroAddress");
+
+    std::vector<uint8_t> addresses;
+    if (requestedAddress == GYRO_ADDRESS_AUTO) {
+        addresses = {GYRO_ADDRESS_PRIMARY, GYRO_ADDRESS_SECONDARY};
+    } else if (requestedAddress == GYRO_ADDRESS_PRIMARY || requestedAddress == GYRO_ADDRESS_SECONDARY) {
+        addresses = {static_cast<uint8_t>(requestedAddress)};
+    } else {
+        doc["success"] = false;
+        doc["error"] = "unsupported gyro address";
+        return serialize_json(doc);
+    }
+
+    for (uint8_t block = 0; block < NUM_I2CS; block++) {
+        if (!PeripheralManager::getInstance().isI2CEnabled(block)) {
+            continue;
+        }
+
+        PeripheralI2C *candidateI2C = PeripheralManager::getInstance().getI2C(block);
+        for (uint8_t address : addresses) {
+            GyroOffsetMeasurement measurement;
+            if (measureGyroOffsetsOnI2C(candidateI2C, block, address, measurement)) {
+                doc["success"] = true;
+                doc["block"] = measurement.block;
+                doc["address"] = measurement.address;
+                doc["accelOffsetX"] = measurement.accelOffsetX;
+                doc["accelOffsetY"] = measurement.accelOffsetY;
+                doc["accelOffsetZ"] = measurement.accelOffsetZ;
+                doc["gyroOffsetX"] = measurement.gyroOffsetX;
+                doc["gyroOffsetY"] = measurement.gyroOffsetY;
+                doc["gyroOffsetZ"] = measurement.gyroOffsetZ;
+                return serialize_json(doc);
+            }
+        }
+    }
+
+    doc["success"] = false;
+    doc["error"] = "LSM6DS3 not found on configured I2C";
+    return serialize_json(doc);
+}
+
 
 std::string getReactiveLEDs()
 {
@@ -1885,6 +1999,16 @@ std::string setAddonOptions()
 
     GamepadUSBHostOptions& gamepadUSBHostOptions = Storage::getInstance().getAddonOptions().gamepadUSBHostOptions;
     docToValue(gamepadUSBHostOptions.enabled, doc, "GamepadUSBHostAddonEnabled");
+
+    GyroOptions& gyroOptions = Storage::getInstance().getAddonOptions().gyroOptions;
+    docToValue(gyroOptions.enabled, doc, "GyroAddonEnabled");
+    docToValue(gyroOptions.address, doc, "gyroAddress");
+    docToValue(gyroOptions.accelOffsetX, doc, "gyroAccelOffsetX");
+    docToValue(gyroOptions.accelOffsetY, doc, "gyroAccelOffsetY");
+    docToValue(gyroOptions.accelOffsetZ, doc, "gyroAccelOffsetZ");
+    docToValue(gyroOptions.gyroOffsetX, doc, "gyroGyroOffsetX");
+    docToValue(gyroOptions.gyroOffsetY, doc, "gyroGyroOffsetY");
+    docToValue(gyroOptions.gyroOffsetZ, doc, "gyroGyroOffsetZ");
 
     AnalogADS1256Options& ads1256Options = Storage::getInstance().getAddonOptions().analogADS1256Options;
     docToValue(ads1256Options.enabled, doc, "Analog1256Enabled");
@@ -2350,6 +2474,16 @@ std::string getAddonOptions()
     const GamepadUSBHostOptions& gamepadUSBHostOptions = Storage::getInstance().getAddonOptions().gamepadUSBHostOptions;
     writeDoc(doc, "GamepadUSBHostAddonEnabled", gamepadUSBHostOptions.enabled);
 
+    const GyroOptions& gyroOptions = Storage::getInstance().getAddonOptions().gyroOptions;
+    writeDoc(doc, "GyroAddonEnabled", gyroOptions.enabled);
+    writeDoc(doc, "gyroAddress", gyroOptions.address);
+    writeDoc(doc, "gyroAccelOffsetX", gyroOptions.accelOffsetX);
+    writeDoc(doc, "gyroAccelOffsetY", gyroOptions.accelOffsetY);
+    writeDoc(doc, "gyroAccelOffsetZ", gyroOptions.accelOffsetZ);
+    writeDoc(doc, "gyroGyroOffsetX", gyroOptions.gyroOffsetX);
+    writeDoc(doc, "gyroGyroOffsetY", gyroOptions.gyroOffsetY);
+    writeDoc(doc, "gyroGyroOffsetZ", gyroOptions.gyroOffsetZ);
+
     AnalogADS1256Options& ads1256Options = Storage::getInstance().getAddonOptions().analogADS1256Options;
     writeDoc(doc, "Analog1256Enabled", ads1256Options.enabled);
     writeDoc(doc, "analog1256Block", ads1256Options.spiBlock);
@@ -2771,6 +2905,7 @@ static const std::pair<const char*, HandlerFuncPtr> handlerFuncs[] =
     { "/api/getHETriggerCalibrations", getHETriggerCalibrations },
     { "/api/getHETriggerVoltage", getHETriggerVoltage },
     { "/api/setHETriggerOptions", setHETriggerOptions },
+    { "/api/measureGyroOffsets", measureGyroOffsets },
     { "/api/setReactiveLEDs", setReactiveLEDs },
     { "/api/getReactiveLEDs", getReactiveLEDs },
     { "/api/setKeyMappings", setKeyMappings },
