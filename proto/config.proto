@@ -925,19 +925,12 @@ message GyroOptions
     optional bool enabled = 1;
     // 0 means auto-detect. Supported fixed addresses are 0x6A and 0x6B.
     optional uint32 address = 2;
-    // Axis mapping values are 1=X, 2=Y, 3=Z. Negative values invert the source axis.
-    optional int32 accelAxisX = 3;
-    optional int32 accelAxisY = 4;
-    optional int32 accelAxisZ = 5;
-    optional int32 gyroAxisX = 6;
-    optional int32 gyroAxisY = 7;
-    optional int32 gyroAxisZ = 8;
-    optional int32 accelOffsetX = 9;
-    optional int32 accelOffsetY = 10;
-    optional int32 accelOffsetZ = 11;
-    optional int32 gyroOffsetX = 12;
-    optional int32 gyroOffsetY = 13;
-    optional int32 gyroOffsetZ = 14;
+    optional int32 accelOffsetX = 3;
+    optional int32 accelOffsetY = 4;
+    optional int32 accelOffsetZ = 5;
+    optional int32 gyroOffsetX = 6;
+    optional int32 gyroOffsetY = 7;
+    optional int32 gyroOffsetZ = 8;
 }
 
 message AddonOptions

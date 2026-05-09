@@ -93,8 +93,6 @@ void GyroAddon::process() {
     int16_t x = 0;
     int16_t y = 0;
     int16_t z = 0;
-    const GyroOptions& options = Storage::getInstance().getAddonOptions().gyroOptions;
-
     GamepadAux3DSensor accelerometerSample;
     GamepadAux3DSensor gyroscopeSample;
 
@@ -102,9 +100,9 @@ void GyroAddon::process() {
     if (accelerationRead) {
         accelerometerSample.enabled = true;
         accelerometerSample.active = true;
-        accelerometerSample.x = mapAxisValue(x, y, z, options.accelAxisX, GYRO_ACCEL_AXIS_X);
-        accelerometerSample.y = mapAxisValue(x, y, z, options.accelAxisY, GYRO_ACCEL_AXIS_Y);
-        accelerometerSample.z = mapAxisValue(x, y, z, options.accelAxisZ, GYRO_ACCEL_AXIS_Z);
+        accelerometerSample.x = mapAxisValue(x, y, z, GYRO_ACCEL_AXIS_X);
+        accelerometerSample.y = mapAxisValue(x, y, z, GYRO_ACCEL_AXIS_Y);
+        accelerometerSample.z = mapAxisValue(x, y, z, GYRO_ACCEL_AXIS_Z);
         gamepad->auxState.sensors.accelerometer = accelerometerSample;
     }
     gamepad->auxState.sensors.accelerometer.active = accelerationRead;
@@ -113,9 +111,9 @@ void GyroAddon::process() {
     if (gyroRead) {
         gyroscopeSample.enabled = true;
         gyroscopeSample.active = true;
-        gyroscopeSample.x = mapAxisValue(x, y, z, options.gyroAxisX, GYRO_GYRO_AXIS_X);
-        gyroscopeSample.y = mapAxisValue(x, y, z, options.gyroAxisY, GYRO_GYRO_AXIS_Y);
-        gyroscopeSample.z = mapAxisValue(x, y, z, options.gyroAxisZ, GYRO_GYRO_AXIS_Z);
+        gyroscopeSample.x = mapAxisValue(x, y, z, GYRO_GYRO_AXIS_X);
+        gyroscopeSample.y = mapAxisValue(x, y, z, GYRO_GYRO_AXIS_Y);
+        gyroscopeSample.z = mapAxisValue(x, y, z, GYRO_GYRO_AXIS_Z);
         gamepad->auxState.sensors.gyroscope = gyroscopeSample;
     }
     gamepad->auxState.sensors.gyroscope.active = gyroRead;
@@ -135,10 +133,7 @@ void GyroAddon::process() {
     nextTimer = getMillis() + POLL_INTERVAL_MS;
 }
 
-uint16_t GyroAddon::mapAxisValue(uint16_t x, uint16_t y, uint16_t z, int32_t axis, int32_t fallbackAxis) {
-    if (axis < -3 || axis > 3 || axis == 0) {
-        axis = fallbackAxis;
-    }
+uint16_t GyroAddon::mapAxisValue(uint16_t x, uint16_t y, uint16_t z, int32_t axis) {
 
     uint16_t value = x;
     int32_t sourceAxis = axis < 0 ? -axis : axis;

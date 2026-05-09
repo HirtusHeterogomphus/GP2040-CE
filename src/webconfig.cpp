@@ -2003,12 +2003,6 @@ std::string setAddonOptions()
     GyroOptions& gyroOptions = Storage::getInstance().getAddonOptions().gyroOptions;
     docToValue(gyroOptions.enabled, doc, "GyroAddonEnabled");
     docToValue(gyroOptions.address, doc, "gyroAddress");
-    docToValue(gyroOptions.accelAxisX, doc, "gyroAccelAxisX");
-    docToValue(gyroOptions.accelAxisY, doc, "gyroAccelAxisY");
-    docToValue(gyroOptions.accelAxisZ, doc, "gyroAccelAxisZ");
-    docToValue(gyroOptions.gyroAxisX, doc, "gyroGyroAxisX");
-    docToValue(gyroOptions.gyroAxisY, doc, "gyroGyroAxisY");
-    docToValue(gyroOptions.gyroAxisZ, doc, "gyroGyroAxisZ");
     docToValue(gyroOptions.accelOffsetX, doc, "gyroAccelOffsetX");
     docToValue(gyroOptions.accelOffsetY, doc, "gyroAccelOffsetY");
     docToValue(gyroOptions.accelOffsetZ, doc, "gyroAccelOffsetZ");
@@ -2483,12 +2477,6 @@ std::string getAddonOptions()
     const GyroOptions& gyroOptions = Storage::getInstance().getAddonOptions().gyroOptions;
     writeDoc(doc, "GyroAddonEnabled", gyroOptions.enabled);
     writeDoc(doc, "gyroAddress", gyroOptions.address);
-    writeDoc(doc, "gyroAccelAxisX", gyroOptions.accelAxisX);
-    writeDoc(doc, "gyroAccelAxisY", gyroOptions.accelAxisY);
-    writeDoc(doc, "gyroAccelAxisZ", gyroOptions.accelAxisZ);
-    writeDoc(doc, "gyroGyroAxisX", gyroOptions.gyroAxisX);
-    writeDoc(doc, "gyroGyroAxisY", gyroOptions.gyroAxisY);
-    writeDoc(doc, "gyroGyroAxisZ", gyroOptions.gyroAxisZ);
     writeDoc(doc, "gyroAccelOffsetX", gyroOptions.accelOffsetX);
     writeDoc(doc, "gyroAccelOffsetY", gyroOptions.accelOffsetY);
     writeDoc(doc, "gyroAccelOffsetZ", gyroOptions.accelOffsetZ);

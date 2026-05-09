@@ -88,7 +88,7 @@ private:
     bool started = false;
 
     bool tryStartSensor(PeripheralI2C *candidateI2C, uint8_t address);
-    uint16_t mapAxisValue(uint16_t x, uint16_t y, uint16_t z, int32_t axis, int32_t fallbackAxis);
+    uint16_t mapAxisValue(uint16_t x, uint16_t y, uint16_t z, int32_t axis);
 };
 
 #endif
