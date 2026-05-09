@@ -95,21 +95,42 @@ void GyroAddon::process() {
     int16_t z = 0;
     const GyroOptions& options = Storage::getInstance().getAddonOptions().gyroOptions;
 
+    GamepadAux3DSensor accelerometerSample;
+    GamepadAux3DSensor gyroscopeSample;
+
     bool accelerationRead = sensor->readAcceleration(x, y, z);
     if (accelerationRead) {
-        gamepad->auxState.sensors.accelerometer.x = mapAxisValue(x, y, z, options.accelAxisX, GYRO_ACCEL_AXIS_X);
-        gamepad->auxState.sensors.accelerometer.y = mapAxisValue(x, y, z, options.accelAxisY, GYRO_ACCEL_AXIS_Y);
-        gamepad->auxState.sensors.accelerometer.z = mapAxisValue(x, y, z, options.accelAxisZ, GYRO_ACCEL_AXIS_Z);
+        accelerometerSample.enabled = true;
+        accelerometerSample.active = true;
+        accelerometerSample.x = mapAxisValue(x, y, z, options.accelAxisX, GYRO_ACCEL_AXIS_X);
+        accelerometerSample.y = mapAxisValue(x, y, z, options.accelAxisY, GYRO_ACCEL_AXIS_Y);
+        accelerometerSample.z = mapAxisValue(x, y, z, options.accelAxisZ, GYRO_ACCEL_AXIS_Z);
+        gamepad->auxState.sensors.accelerometer = accelerometerSample;
     }
     gamepad->auxState.sensors.accelerometer.active = accelerationRead;
 
     bool gyroRead = sensor->readGyroscope(x, y, z);
     if (gyroRead) {
-        gamepad->auxState.sensors.gyroscope.x = mapAxisValue(x, y, z, options.gyroAxisX, GYRO_GYRO_AXIS_X);
-        gamepad->auxState.sensors.gyroscope.y = mapAxisValue(x, y, z, options.gyroAxisY, GYRO_GYRO_AXIS_Y);
-        gamepad->auxState.sensors.gyroscope.z = mapAxisValue(x, y, z, options.gyroAxisZ, GYRO_GYRO_AXIS_Z);
+        gyroscopeSample.enabled = true;
+        gyroscopeSample.active = true;
+        gyroscopeSample.x = mapAxisValue(x, y, z, options.gyroAxisX, GYRO_GYRO_AXIS_X);
+        gyroscopeSample.y = mapAxisValue(x, y, z, options.gyroAxisY, GYRO_GYRO_AXIS_Y);
+        gyroscopeSample.z = mapAxisValue(x, y, z, options.gyroAxisZ, GYRO_GYRO_AXIS_Z);
+        gamepad->auxState.sensors.gyroscope = gyroscopeSample;
     }
     gamepad->auxState.sensors.gyroscope.active = gyroRead;
+
+    if (accelerationRead && gyroRead) {
+        GamepadAuxSensors& sensors = gamepad->auxState.sensors;
+        for (uint8_t i = 1; i < GAMEPAD_AUX_MAX_IMU_SAMPLES; i++) {
+            sensors.imuSamples[i - 1] = sensors.imuSamples[i];
+        }
+        sensors.imuSamples[GAMEPAD_AUX_MAX_IMU_SAMPLES - 1].accelerometer = accelerometerSample;
+        sensors.imuSamples[GAMEPAD_AUX_MAX_IMU_SAMPLES - 1].gyroscope = gyroscopeSample;
+        if (sensors.imuSampleCount < GAMEPAD_AUX_MAX_IMU_SAMPLES) {
+            sensors.imuSampleCount++;
+        }
+    }
 
     nextTimer = getMillis() + POLL_INTERVAL_MS;
 }

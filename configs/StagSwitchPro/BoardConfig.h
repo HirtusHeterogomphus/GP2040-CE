@@ -74,10 +74,10 @@
 #define I2C0_PIN_SCL       13
 #define GYRO_ENABLED       1
 #define GYRO_ADDRESS       0x6A
-#define GYRO_ACCEL_AXIS_X  2
-#define GYRO_ACCEL_AXIS_Y  1
+#define GYRO_ACCEL_AXIS_X  -1
+#define GYRO_ACCEL_AXIS_Y  -2
 #define GYRO_ACCEL_AXIS_Z  3
-#define GYRO_GYRO_AXIS_X   2
+#define GYRO_GYRO_AXIS_X   -2
 #define GYRO_GYRO_AXIS_Y   1
 #define GYRO_GYRO_AXIS_Z   3
 

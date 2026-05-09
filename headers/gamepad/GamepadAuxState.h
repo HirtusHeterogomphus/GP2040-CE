@@ -7,6 +7,7 @@ using namespace std;
 #include "enums.pb.h"
 
 #define GAMEPAD_AUX_MAX_TOUCHPADS 2
+#define GAMEPAD_AUX_MAX_IMU_SAMPLES 3
 
 #define GAMEPAD_AUX_MAX_POWER 100
 
@@ -105,6 +106,12 @@ struct GamepadAuxRGBSensor
     uint8_t durationOff = 0;
 };
 
+struct GamepadAuxIMUSample
+{
+    GamepadAux3DSensor accelerometer;
+    GamepadAux3DSensor gyroscope;
+};
+
 struct GamepadAuxHapticChannel
 {
     bool enabled = false;
@@ -133,6 +140,8 @@ struct GamepadAuxSensors
     GamepadAux3DSensor touchpad[GAMEPAD_AUX_MAX_TOUCHPADS];
     GamepadAux3DSensor gyroscope;
     GamepadAux3DSensor accelerometer;
+    GamepadAuxIMUSample imuSamples[GAMEPAD_AUX_MAX_IMU_SAMPLES];
+    uint8_t imuSampleCount = 0;
     GamepadAux3DSensor magnetometer;
     GamepadAux4DSensor timeOfFlight;
 
