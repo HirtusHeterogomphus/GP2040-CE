@@ -679,6 +679,15 @@ async function setHETriggerCalibrations(triggers) {
 	return Http.post(`${baseUrl}/api/setHETriggerCalibrations`, triggers);
 }
 
+async function measureGyroOffsets(settings) {
+	try {
+		const response = await Http.post(`${baseUrl}/api/measureGyroOffsets`, settings);
+		return response.data;
+	} catch (error) {
+		console.error(error);
+	}
+}
+
 async function getHeldPins(abortSignal) {
 	try {
 		const response = await Http.get(`${baseUrl}/api/getHeldPins`, {
@@ -744,6 +753,7 @@ export default {
 	setHETriggerCalibrations,
 	getHETriggerCalibrations,
 	setHETriggerOptions,
+	measureGyroOffsets,
 	getReactiveLEDs,
 	setReactiveLEDs,
 	getButtonLayouts,

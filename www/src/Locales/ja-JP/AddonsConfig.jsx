@@ -191,4 +191,23 @@ export default {
 	'tg16-extension-data-pin2-label': 'データ GPIO 端子 2 (D_SELECT)',
 	'tg16-extension-data-pin3-label': 'データ GPIO 端子 3 (L_RUN)',
 	'tg16-extension-desc-header': 'PCエンジン/TurboGrafx-16 拡張マッピング',
+	'gyro-header-text': 'ジャイロスコープ設定',
+	'gyro-i2c-config-text':
+		'SDA/SCL端子と速度は <1>Peripheral Mapping</1> で設定します',
+	'gyro-address-label': 'LSM6DS3 I2C アドレス',
+	'gyro-address-auto': '自動検出',
+	'gyro-address-6a': '0x6A',
+	'gyro-address-6b': '0x6B',
+	'gyro-offset-accel-x': '加速度 X オフセット',
+	'gyro-offset-accel-y': '加速度 Y オフセット',
+	'gyro-offset-accel-z': '加速度 Z オフセット',
+	'gyro-offset-gyro-x': 'ジャイロ X オフセット',
+	'gyro-offset-gyro-y': 'ジャイロ Y オフセット',
+	'gyro-offset-gyro-z': 'ジャイロ Z オフセット',
+	'gyro-offset-measure-button': 'オフセット測定',
+	'gyro-offset-measuring-button': '測定中...',
+	'gyro-offset-measure-success': 'ジャイロオフセットを測定しました。保存すると適用されます。',
+	'gyro-offset-measure-failed': 'ジャイロオフセット測定に失敗しました: {{error}}',
+	'gyro-offset-save-notice':
+		'測定中はコントローラを静止させてください。新しいオフセットは保存と再起動後に適用されます。',
 };

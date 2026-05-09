@@ -8,3 +8,6 @@
 [submodule "submodules/Pico_AnalogJoystick"]
 	path = submodules/Pico_AnalogJoystick
 	url = https://github.com/HirtusHeterogomphus/Pico_AnalogJoystick
+[submodule "submodules/Pico_LSM6DS3"]
+	path = submodules/Pico_LSM6DS3
+	url = https://github.com/HirtusHeterogomphus/Pico_LSM6DS3

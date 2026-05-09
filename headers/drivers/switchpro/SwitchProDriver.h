@@ -1,6 +1,11 @@
 /*
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: GPL-2.0-only
  * SPDX-FileCopyrightText: Copyright (c) 2024 OpenStickCommunity (gp2040-ce.info)
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2026 ndeadly
+ *
+ * Switch IMU quaternion packet layout is derived from MissionControl's
+ * mc_mitm/source/controllers/switch_motion_packing.hpp and
+ * mc_mitm/source/controllers/switch_motion_packing.cpp.
  */
 
 #ifndef _SWITCH_PRO_DRIVER_H_
@@ -30,6 +35,17 @@ public:
     virtual uint16_t GetJoystickMidValue();
     virtual USBListener * get_usb_auth_listener() { return nullptr; }
 private:
+    // Switch2 quaternion mode 用の内部 IMU frame。
+    // BoardConfig 適用後の auxState から signed 値を取り出し、姿勢推定と packet 生成で共有する。
+    struct quaterniomIMUFrame {
+        int16_t accelX = 0;
+        int16_t accelY = 0;
+        int16_t accelZ = 0;
+        int16_t gyroX = 0;
+        int16_t gyroY = 0;
+        int16_t gyroZ = 0;
+    };
+
     uint8_t report[SWITCH_PRO_ENDPOINT_SIZE] = { };
     uint8_t last_report[SWITCH_PRO_ENDPOINT_SIZE] = { };
     SwitchProReport switchReport;
@@ -51,8 +67,18 @@ private:
     SwitchDeviceInfo deviceInfo;
     uint8_t playerID = 0;
     uint8_t inputMode = 0x30;
-    bool isIMUEnabled = false;
+    uint8_t imuMode = 0;
     bool isVibrationEnabled = false;
+    // TOGGLE_IMU=0x02~0x05 の quaternion payload で送る姿勢。
+    // X/Y/Z/W の順で保持し、送信時に Switch2 の compressed quaternion 形式へ変換する。
+    float imuQuaternionX = 0.0f;
+    float imuQuaternionY = 0.0f;
+    float imuQuaternionZ = 0.0f;
+    float imuQuaternionW = 1.0f;
+    // quaternion 積分と timestamp に使う時間管理。
+    uint64_t imuQuaternionLastTimeUs = 0;
+    uint64_t imuTimestampRemainderUs = 0;
+    uint16_t imuTimestamp = 0;
 
     void sendIdentify();
     void sendSubCommand(uint8_t subCommand);
@@ -60,6 +86,15 @@ private:
     bool sendReport(uint8_t reportID, const void* reportData, uint16_t reportLength);
 
     void readSPIFlash(uint8_t* dest, uint32_t address, uint8_t size);
+    void resetIMUState();
+    void updateIMUData(Gamepad *gamepad);
+    void updateRawIMUData(Gamepad *gamepad);
+    void updateQuaternionIMUData(Gamepad *gamepad);
+    quaterniomIMUFrame toQuaternionFrame(const GamepadAuxIMUSample& sample) const;
+    void updateAttitude(const quaterniomIMUFrame& frame, uint64_t deltaUs);
+    GamepadAuxIMUSample getLatestIMUSample(Gamepad *gamepad);
+    void writeIMUSample(uint8_t *dest, const GamepadAuxIMUSample& sample);
+    void writeCurrentIMUSample(uint8_t *dest, Gamepad *gamepad);
 
     void handleConfigReport(uint8_t switchReportID, uint8_t switchReportSubID, const uint8_t *reportData, uint16_t reportLength);
     void handleFeatureReport(uint8_t switchReportID, uint8_t switchReportSubID, const uint8_t *reportData, uint16_t reportLength);
@@ -111,27 +146,25 @@ private:
         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
 
         // config & calibration 2
-        // left stick
-        0xa4, 0x46, 0x6a, 0x00, 0x08, 0x80, 0xa4, 0x46, 
-        0x6a,
+        // left stick: max, center, min
+        0xFF, 0xF7, 0x7F, 0x00, 0x08, 0x80, 0x00, 0x08, 0x80,
 
-        // right stick
-        0x00, 0x08, 0x80, 0xa4, 0x46, 0x6a, 0xa4, 0x46,
-        0x6a,
+        // right stick: center, min, max
+        0x00, 0x08, 0x80, 0x00, 0x08, 0x80, 0xFF, 0xF7, 0x7F,
 
         0xFF,
 
         // body color
-        0x1B, 0x1B, 0x1D,
-
-        // button color
         0xFF, 0xFF, 0xFF,
 
+        // button color
+        0xFF, 0x00, 0x00,
+
         // left grip color
-        0xEC, 0x00, 0x8C,
+        0x00, 0x00, 0xFF,
 
         // right grip color
-        0xEC, 0x00, 0x8C,
+        0x00, 0x00, 0xFF,
 
         0x01, 
 
@@ -164,21 +197,23 @@ private:
     };
 
     SwitchUserCalibration* userCalibration = (SwitchUserCalibration*)userCalibrationData;
-    const uint8_t userCalibrationData[0x3F] = {
+    const uint8_t userCalibrationData[0x40] = {
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
         
         // Left Stick
-        0xB2, 0xA1, 0xa4, 0x46, 0x6a, 0x00, 0x08, 0x80, 
-        0xa4, 0x46, 0x6a,
+        0xff, 0xff, 0xFF, 0xF7, 0x7F, 0x00, 0x08, 0x80,
+        0x00, 0x08, 0x80,
 
         // Right Stick
-        0xB2, 0xA1, 0x00, 0x08, 0x80, 0xa4, 0x46, 0x6a,
-        0xa4, 0x46, 0x6a,
+        0xff, 0xff, 0x00, 0x08, 0x80, 0x00, 0x08, 0x80,
+        0xFF, 0xF7, 0x7F,
 
         // Motion
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+        0xff, 0xff,
+        0xE3, 0xFF, 0x39, 0xFF, 0xED, 0x01, 0x00, 0x40,
+        0x00, 0x40, 0x00, 0x40, 0x09, 0x00, 0xEA, 0xFF,
+        0xA1, 0xFF, 0x3B, 0x34, 0x3B, 0x34, 0x3B, 0x34,
     };
 };
 
