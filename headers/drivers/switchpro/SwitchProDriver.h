@@ -1,6 +1,11 @@
 /*
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: GPL-2.0-only
  * SPDX-FileCopyrightText: Copyright (c) 2024 OpenStickCommunity (gp2040-ce.info)
+ * SPDX-FileCopyrightText: Copyright (c) 2020-2026 ndeadly
+ *
+ * Switch IMU mode2 quaternion packet layout is derived from MissionControl's
+ * mc_mitm/source/controllers/switch_motion_packing.hpp and
+ * mc_mitm/source/controllers/switch_motion_packing.cpp.
  */
 
 #ifndef _SWITCH_PRO_DRIVER_H_
