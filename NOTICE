@@ -1,0 +1,60 @@
+GP2040-CE Switch Pro Controller Fork notices
+============================================
+
+This fork is distributed as a whole under GPL-2.0-only. See LICENSE.
+
+Original GP2040-CE code
+----------------------
+
+This fork includes code derived from OpenStickCommunity/GP2040-CE:
+
+  https://github.com/OpenStickCommunity/GP2040-CE
+
+The original GP2040-CE project was distributed under the MIT License.
+The MIT-origin copyright and license notice is preserved below.
+
+MIT License
+
+Copyright (c) 2024 OpenStickCommunity (gp2040-ce.info)
+Copyright (c) 2021 Jason Skuby (mytechtoybox.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+MissionControl-derived Switch IMU mode2 packing
+-----------------------------------------------
+
+Switch Pro TOGGLE_IMU=0x02 / mode2 quaternion packing is treated as derived
+from MissionControl:
+
+  https://github.com/ndeadly/MissionControl
+
+Relevant upstream files:
+
+  mc_mitm/source/controllers/switch_motion_packing.hpp
+  mc_mitm/source/controllers/switch_motion_packing.cpp
+
+Upstream copyright:
+
+  Copyright (c) 2020-2026 ndeadly
+
+Upstream license:
+
+  GPL-2.0-only
+
+See docs/switch2-imu-provenance.md for the local provenance note.
