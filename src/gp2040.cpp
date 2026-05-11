@@ -27,7 +27,6 @@
 #include "addons/spi_analog_ads1256.h"
 #include "addons/wiiext.h"
 #include "addons/input_macro.h"
-#include "addons/snes_input.h"
 #include "addons/rotaryencoder.h"
 #include "addons/i2c_gpio_pcf8575.h"
 #include "addons/gamepad_usb_host.h"
@@ -111,7 +110,6 @@ void GP2040::setup() {
 	addons.LoadAddon(new I2CAnalog1219Input());
 	addons.LoadAddon(new SPIAnalog1256Input());
 	addons.LoadAddon(new WiiExtensionInput());
-	addons.LoadAddon(new SNESpadInput());
 	addons.LoadAddon(new SliderSOCDInput());
 	addons.LoadAddon(new TiltInput());
 	addons.LoadAddon(new RotaryEncoderInput());

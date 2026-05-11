@@ -122,12 +122,6 @@ export default {
 	'ps4-mode-private-key-label': 'Clave Privada (PEM)',
 	'ps4-mode-serial-number-label': 'Número de Serie (16 Bytes en Hex Ascii)',
 	'ps4-mode-signature-label': 'Firma (256 Bytes en Binario)',
-	'snes-extension-header-text': 'Configuración de Extensión SNES',
-	'snes-extension-sub-header-text':
-		'<0>Nota: Si la pantalla está habilitada al mismo tiempo, este complemento será desactivado.</0> <1>Controladores actualmente compatibles:</1> <2>Mando SNES: D-pad compatible. B = B1, A = B2, Y = B3, X = B4, L = L1, R = R1, Select = S1, Start = S2<br/>Mouse SNES: Stick analógico compatible. Clic Izquierdo = B1, Clic Derecho = B2<br/>NES: D-pad compatible. B = B1, A = B2, Select = S1, Start = S2</2>',
-	'snes-extension-clock-pin-label': 'Pin GPIO Reloj',
-	'snes-extension-latch-pin-label': 'Pin GPIO Latch',
-	'snes-extension-data-pin-label': 'Pin GPIO Datos',
 	'focus-mode-header-text': 'Configuración de Modo Enfoque',
 	'focus-mode-pin-label': 'Pin GPIO Modo Enfoque',
 	'keyboard-host-header-text': 'Configuración de Host Teclado/Ratón',

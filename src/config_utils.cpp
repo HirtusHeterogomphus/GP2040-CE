@@ -29,7 +29,6 @@
 #include "addons/spi_analog_ads1256.h"
 #include "addons/turbo.h"
 #include "addons/wiiext.h"
-#include "addons/snes_input.h"
 #include "addons/input_macro.h"
 #include "addons/rotaryencoder.h"
 #include "addons/i2c_gpio_pcf8575.h"
@@ -779,12 +778,6 @@ void ConfigUtils::initUnsetPropertiesWithDefaults(Config& config)
     INIT_UNSET_PROPERTY(config.addonOptions.wiiOptions, deprecatedI2cSDAPin, -1);
     INIT_UNSET_PROPERTY(config.addonOptions.wiiOptions, deprecatedI2cSCLPin, -1);
     INIT_UNSET_PROPERTY(config.addonOptions.wiiOptions, deprecatedI2cSpeed, WII_EXTENSION_I2C_SPEED);
-
-    // addonOptions.snesOptions
-    INIT_UNSET_PROPERTY(config.addonOptions.snesOptions, enabled, !!SNES_PAD_ENABLED);
-    INIT_UNSET_PROPERTY(config.addonOptions.snesOptions, clockPin, SNES_PAD_CLOCK_PIN);
-    INIT_UNSET_PROPERTY(config.addonOptions.snesOptions, latchPin, SNES_PAD_LATCH_PIN);
-    INIT_UNSET_PROPERTY(config.addonOptions.snesOptions, dataPin, SNES_PAD_DATA_PIN);
 
     // addonOptions.pcf8575Options
     INIT_UNSET_PROPERTY(config.addonOptions.pcf8575Options, enabled, I2C_PCF8575_ENABLED);
@@ -1649,9 +1642,6 @@ void gpioMappingsMigrationCore(Config& config)
     markAddonPinIfUsed(config.addonOptions.turboOptions.shmupBtn3Pin);
     markAddonPinIfUsed(config.addonOptions.turboOptions.shmupBtn4Pin);
     markAddonPinIfUsed(config.addonOptions.reverseOptions.ledPin);
-    markAddonPinIfUsed(config.addonOptions.snesOptions.clockPin);
-    markAddonPinIfUsed(config.addonOptions.snesOptions.latchPin);
-    markAddonPinIfUsed(config.addonOptions.snesOptions.dataPin);
     markAddonPinIfUsed(config.addonOptions.tg16Options.oePin);
     markAddonPinIfUsed(config.addonOptions.tg16Options.selectPin);
     markAddonPinIfUsed(config.addonOptions.tg16Options.dataPin0);

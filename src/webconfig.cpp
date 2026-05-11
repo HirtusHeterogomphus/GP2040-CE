@@ -1963,12 +1963,6 @@ std::string setAddonOptions()
     WiiOptions& wiiOptions = Storage::getInstance().getAddonOptions().wiiOptions;
     docToValue(wiiOptions.enabled, doc, "WiiExtensionAddonEnabled");
 
-    SNESOptions& snesOptions = Storage::getInstance().getAddonOptions().snesOptions;
-    docToValue(snesOptions.enabled, doc, "SNESpadAddonEnabled");
-    docToPin(snesOptions.clockPin, doc, "snesPadClockPin");
-    docToPin(snesOptions.latchPin, doc, "snesPadLatchPin");
-    docToPin(snesOptions.dataPin, doc, "snesPadDataPin");
-
     KeyboardHostOptions& keyboardHostOptions = Storage::getInstance().getAddonOptions().keyboardHostOptions;
     docToValue(keyboardHostOptions.enabled, doc, "KeyboardHostAddonEnabled");
     docToValue(keyboardHostOptions.mapping.keyDpadUp, doc, "keyboardHostMap", "Up");
@@ -2436,12 +2430,6 @@ std::string getAddonOptions()
 
     const WiiOptions& wiiOptions = Storage::getInstance().getAddonOptions().wiiOptions;
     writeDoc(doc, "WiiExtensionAddonEnabled", wiiOptions.enabled);
-
-    const SNESOptions& snesOptions = Storage::getInstance().getAddonOptions().snesOptions;
-    writeDoc(doc, "snesPadClockPin", cleanPin(snesOptions.clockPin));
-    writeDoc(doc, "snesPadLatchPin", cleanPin(snesOptions.latchPin));
-    writeDoc(doc, "snesPadDataPin", cleanPin(snesOptions.dataPin));
-    writeDoc(doc, "SNESpadAddonEnabled", snesOptions.enabled);
 
     const KeyboardHostOptions& keyboardHostOptions = Storage::getInstance().getAddonOptions().keyboardHostOptions;
     writeDoc(doc, "KeyboardHostAddonEnabled", keyboardHostOptions.enabled);

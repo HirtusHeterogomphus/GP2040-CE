@@ -125,13 +125,6 @@ export default {
 	'ps4-mode-private-key-label': 'Private Key (PEM)',
 	'ps4-mode-serial-number-label': '시리얼 번호 (16바이트의 16진수 ASCII)',
 	'ps4-mode-signature-label': '서명파일 (256바이트 바이너리)',
-	'snes-extension-header-text': '슈퍼 패미컴 확장 설정',
-	'snes-extension-sub-header-text':
-		'참고 ：디스플레이가 동시에 활성화되면 현재 애드온은 비활성화됩니다',
-	'snes-extension-clock-pin-label': 'Clock 핀',
-	'snes-extension-latch-pin-label': 'Latch 핀',
-	'snes-extension-data-pin-label': 'Data 핀',
-	'snes-extension-desc-header': 'SNES 확장 맵핑',
 	'focus-mode-header-text': '포커스 모드 설정',
 	'focus-mode-pin-label': '포커스 모드 핀',
 	'keyboard-host-header-text': '키보드/마우스 호스트 설정',

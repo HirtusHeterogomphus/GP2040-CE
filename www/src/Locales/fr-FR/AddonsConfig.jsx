@@ -125,13 +125,6 @@ export default {
 	'ps4-mode-private-key-label': 'Clé privée (PEM)',
 	'ps4-mode-serial-number-label': 'Numéro de série (16 octets en ASCII hex)',
 	'ps4-mode-signature-label': 'Signature (256 octets en binaire)',
-	'snes-extension-header-text': 'Configuration de l\'extension SNES',
-	'snes-extension-sub-header-text':
-		'<0>Remarque : Si l\'affichage est activé en même temps, ce module complémentaire sera désactivé.</0> <1>Contrôleurs actuellement supportés</1> <0>Manette SNES : D-Pad supporté. B = B1, A = B2, Y = B3, X = B4, L = L1, R = R1, Select = S1, Start = S2</0> <0>Souris SNES : Stick analogique supporté. Clic gauche = B1, Clic droit = B2</0> <0>NES : D-Pad supporté. B = B1, A = B2, Select = S1, Start = S2</0>',
-	'snes-extension-clock-pin-label': 'Broche GPIO d\'horloge',
-	'snes-extension-latch-pin-label': 'Broche GPIO de verrouillage',
-	'snes-extension-data-pin-label': 'Broche GPIO de données',
-	'snes-extension-desc-header': 'Mappage des extensions SNES',
 	'focus-mode-header-text': 'Configuration du mode Focus',
 	'focus-mode-pin-label': 'Broche GPIO du mode Focus',
 	'keyboard-host-header-text': 'Configuration de l\'hôte clavier/souris',

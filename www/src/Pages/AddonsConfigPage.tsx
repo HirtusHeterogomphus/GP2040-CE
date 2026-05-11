@@ -36,7 +36,6 @@ import SOCD, { socdScheme, socdState } from '../Addons/SOCD';
 import Tilt, { tiltScheme, tiltState } from '../Addons/Tilt';
 import Turbo, { turboScheme, turboState } from '../Addons/Turbo';
 import Wii, { wiiScheme, wiiState } from '../Addons/Wii';
-import SNES, { snesState } from '../Addons/SNES';
 import FocusMode, {
 	focusModeScheme,
 	focusModeState,
@@ -108,7 +107,6 @@ export const DEFAULT_VALUES = {
 	...buzzerState,
 	...socdState,
 	...wiiState,
-	...snesState,
 	...tg16State,
 	...focusModeState,
 	...keyboardState,
@@ -134,7 +132,6 @@ const ADDONS = [
 	Buzzer,
 	SOCD,
 	Wii,
-	SNES,
 	TG16,
 	FocusMode,
 	Keyboard,

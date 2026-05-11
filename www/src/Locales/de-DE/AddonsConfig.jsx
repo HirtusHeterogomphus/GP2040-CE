@@ -112,12 +112,6 @@ export default {
 	'ps4-mode-private-key-label': 'Privater Schlüssel (PEM)',
 	'ps4-mode-serial-number-label': 'Seriennummer (16 Bytes in Hex Ascii)',
 	'ps4-mode-signature-label': 'Signatur (256 Bytes in Binär)',
-	'snes-extension-header-text': 'SNES-Erweiterungskonfiguration',
-	'snes-extension-sub-header-text':
-		'<0>Hinweis: Falls das Display zur gleichen Zeit aktiviert ist, wird dieses Add-On deaktiviert.</0> <1>Derzeit unterstützte Controller:</1> <2>SNES-Pad: D-Pad-Unterstützung. B = B1, A = B2, Y = B3, X = B4, L = L1, R = R1, Select = S1, Start = S2<br/>SNES-Maus: Analog-Stick-Unterstützung. Linksklick = B1, Rechtsklick = B2<br/>NES: D-Pad-Unterstützung. B = B1, A = B2, Select = S1, Start = S2</2>',
-	'snes-extension-clock-pin-label': 'Takt Pin',
-	'snes-extension-latch-pin-label': 'Latch Pin',
-	'snes-extension-data-pin-label': 'Daten Pin',
 	'focus-mode-header-text': 'Fokus-Modus-Konfiguration',
 	'focus-mode-pin-label': 'Fokus-Modus-Pin',
 	'keyboard-host-header-text': 'Tastatur-Host-Konfiguration',

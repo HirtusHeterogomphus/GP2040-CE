@@ -157,13 +157,6 @@ export default {
 	'ps4-mode-private-key-label': 'Private Key (PEM)',
 	'ps4-mode-serial-number-label': 'Serial Number (16 Bytes in Hex Ascii)',
 	'ps4-mode-signature-label': 'Signature (256 Bytes in Binary)',
-	'snes-extension-header-text': 'SNES Extension Configuration',
-	'snes-extension-sub-header-text':
-		'Note: If the display is enabled at the same time, this add-on will be disabled.',
-	'snes-extension-clock-pin-label': 'Clock GPIO Pin',
-	'snes-extension-latch-pin-label': 'Latch GPIO Pin',
-	'snes-extension-data-pin-label': 'Data GPIO Pin',
-	'snes-extension-desc-header': 'SNES Extension Mapping',
 	'focus-mode-header-text': 'Focus Mode Configuration',
 	'focus-mode-pin-label': 'Focus Mode GPIO Pin',
 	'keyboard-host-header-text': 'Keyboard/Mouse Host Configuration',

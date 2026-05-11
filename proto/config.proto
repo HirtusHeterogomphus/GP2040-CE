@@ -752,14 +752,6 @@ message WiiOptions
     optional ControllerOptions controllers = 6;
 }
 
-message SNESOptions
-{
-    optional bool enabled = 1;
-    optional int32 clockPin = 2;
-    optional int32 latchPin = 3;
-    optional int32 dataPin = 4;
-}
-
 message TG16Options
 {
     optional bool enabled = 1;
@@ -949,7 +941,7 @@ message AddonOptions
     optional PS4Options ps4Options = 12 [(nanopb).disallow_export = true];
     optional WiiOptions wiiOptions = 13;
     optional SOCDSliderOptions socdSliderOptions = 14;
-    optional SNESOptions snesOptions = 15;
+    reserved 15;
     optional FocusModeOptions focusModeOptions = 16;
     optional KeyboardHostOptions keyboardHostOptions = 17;
     optional TiltOptions tiltOptions = 18;

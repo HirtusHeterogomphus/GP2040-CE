@@ -125,13 +125,6 @@ export default {
 	'ps4-mode-private-key-label': 'Private Anahtarı (PEM)',
 	'ps4-mode-serial-number-label': 'Seri Numarası (Hex Ascii 16 Bayt)',
 	'ps4-mode-signature-label': 'İmza (256 Bytes in Binary)',
-	'snes-extension-header-text': 'SNES Uzantı Yapılandırması',
-	'snes-extension-sub-header-text':
-		'Not: Aynı anda ekran etkinleştirilirse bu eklenti devre dışı kalacaktır.',
-	'snes-extension-clock-pin-label': 'Saat GPIO Pin',
-	'snes-extension-latch-pin-label': 'Latch GPIO Pini',
-	'snes-extension-data-pin-label': 'Veri GPIO Pin',
-	'snes-extension-desc-header': 'SNES Uzantısı Eşlemesi',
 	'focus-mode-header-text': 'Odak Modu Yapılandırması',
 	'focus-mode-pin-label': 'Odak Modu GPIO Pin',
 	'keyboard-host-header-text': 'Klavye/Fare Ana Bilgisayar Yapılandırması',

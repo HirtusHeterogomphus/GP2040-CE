@@ -119,12 +119,6 @@ export default {
 	'wii-extension-scl-pin-label': 'Pino SCL I2C',
 	'wii-extension-block-label': 'Bloqueio I2C',
 	'wii-extension-speed-label': 'Velocidade I2C',
-	'snes-extension-header-text': 'Configuração de Extensão SNES',
-	'snes-extension-sub-header-text':
-		'<0>Observação: se a Tela estiver habilitada ao mesmo tempo, este complemento será desativado.</0> <1>Controladores Atualmente Suportados</1> <2>Controle SNES: Suporta D-Pad. B = B1, A = B2, Y = B3, X = B4, L = L1, R = R1, Selecionar = S1, Iniciar = S2<br/>Mouse SNES: Suporta Stick Analógico. Clique Esquerdo = B1, Clique Direito = B2<br/>NES: Suporta D-Pad. B = B1, A = B2, Selecionar = S1, Iniciar = S2</2>',
-	'snes-extension-clock-pin-label': 'Pino de Clock',
-	'snes-extension-latch-pin-label': 'Pino de Latch',
-	'snes-extension-data-pin-label': 'Pino de Dados',
 	'focus-mode-header-text': 'Configuração de Modo de Foco',
 	'focus-mode-pin-label': 'Pino do Modo de Foco',
 	'keyboard-host-header-text': 'Configuração de Host de Teclado',

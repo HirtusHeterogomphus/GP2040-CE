@@ -124,13 +124,6 @@ export default {
 	'ps4-mode-private-key-label': '秘密鍵 (PEM)',
 	'ps4-mode-serial-number-label': 'シリアル番号 (16バイトの16進コードASCII)',
 	'ps4-mode-signature-label': '署名ファイル (256バイトバイナリー)',
-	'snes-extension-header-text': 'スーパーファミコン拡張設定',
-	'snes-extension-sub-header-text':
-		'注：ディスプレイと同時に有効化した場合、このAdd-onは無効化されます',
-	'snes-extension-clock-pin-label': 'Clock 端子',
-	'snes-extension-latch-pin-label': 'Latch 端子',
-	'snes-extension-data-pin-label': 'Data 端子',
-	'snes-extension-desc-header': 'スーパーファミコン拡張マッピング',
 	'focus-mode-header-text': 'フォーカスモード設定',
 	'focus-mode-pin-label': 'フォーカスモード端子',
 	'keyboard-host-header-text': 'キーボードホスト設定',
